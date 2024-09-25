@@ -65,6 +65,7 @@ jobs:
           for artifact in ./publish/*; do
             zip -r compressed_artifacts/$(basename $artifact).zip $artifact
           done
+        shell: bash
 
       # Upload compressed artifacts
       - name: Upload compressed artifacts
