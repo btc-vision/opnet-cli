@@ -1,3 +1,9 @@
+# To build Windows version:
+dotnet build --configuration Release
+
+## The output files are located in the following folder: 
+bin/Release/net8.0
+
 # To build MacOS x64 version:
 dotnet msbuild /t:PublishToMacOSX64
 
