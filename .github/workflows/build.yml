@@ -58,21 +58,12 @@ jobs:
           fi
         shell: bash
 
-      # Compress artifacts before uploading
-      - name: Compress artifacts
-        run: |
-          mkdir -p compressed_artifacts
-          for artifact in ./publish/*; do
-            zip -r compressed_artifacts/$(basename $artifact).zip $artifact
-          done
-        shell: bash
-
-      # Upload compressed artifacts
-      - name: Upload compressed artifacts
+      # Upload artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Compressed-${{ matrix.os }}-${{ matrix.architecture }}
-          path: ./compressed_artifacts/
+          name: Published-${{ matrix.os }}-${{ matrix.architecture }}
+          path: ./publish/
 
   release:
     name: Create Release
@@ -84,13 +75,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Download compressed artifacts from the build job
+      # Download artifacts from the build job
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           path: ./artifacts
 
-      # Create GitHub Release and upload compressed artifacts
+      # Create GitHub Release and upload artifacts
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -99,6 +90,6 @@ jobs:
           body: 'Automated release from GitHub Actions'
           draft: false
           prerelease: false
-          artifacts: './artifacts/compressed_artifacts/*'
+          artifacts: './artifacts/*'
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
