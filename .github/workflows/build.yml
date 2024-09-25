@@ -65,23 +65,48 @@ jobs:
           name: Published-${{ matrix.os }}-${{ matrix.architecture }}
           path: ./publish/
 
-  release:
-    name: Create Release
+  zip:
+    name: Zip artifacts
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code from the repository
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       # Download artifacts from the build job
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: ./artifacts
+          name: Published-ubuntu-latest-x64
+          path: ./publish
 
-      # Create GitHub Release and upload artifacts
+      # Compress artifacts before uploading
+      - name: Compress artifacts
+        run: |
+          mkdir -p compressed_artifacts
+          for artifact in ./publish/*; do
+            zip -r compressed_artifacts/$(basename $artifact).zip $artifact
+          done
+
+      # Upload all zip files from the compressed_artifacts folder
+      - name: Upload compressed artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: CompressedArtifacts
+          path: compressed_artifacts/*.zip
+
+  release:
+    name: Create Release
+    needs: zip
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download compressed artifacts from the zip job
+      - name: Download compressed artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: CompressedArtifacts
+          path: ./compressed_artifacts
+
+      # Create GitHub Release and upload compressed artifacts
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -90,6 +115,6 @@ jobs:
           body: 'Automated release from GitHub Actions'
           draft: false
           prerelease: false
-          artifacts: './artifacts/*'
+          artifacts: './compressed_artifacts/*'
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
