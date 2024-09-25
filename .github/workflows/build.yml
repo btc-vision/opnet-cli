@@ -71,11 +71,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Download artifacts from the build job
-      - name: Download artifacts
+      # Download all artifacts from the build job
+      - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
-          name: Published-ubuntu-latest-x64
           path: ./publish
 
       # Compress artifacts before uploading
