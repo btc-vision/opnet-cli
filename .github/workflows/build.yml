@@ -56,6 +56,7 @@ jobs:
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             dotnet publish -c Release -r win-x64 --self-contained --property:PublishDir=./publish/win-x64/
           fi
+        shell: bash
 
       # Upload artifacts
       - name: Upload artifacts
