@@ -1,0 +1,16 @@
+{
+    "targets": {
+      "release": {
+        "outFile": "build/<%CONTRACT_NAME%>.wasm",
+        "textFile": "build/<%CONTRACT_NAME%>.wat",
+        "sourceMap": false,
+        "optimizeLevel": 3,
+        "shrinkLevel": 2,
+        "converge": true,
+        "noAssert": true
+      }
+    },
+    "options": {
+        "bindings": "esm"
+    }
+}

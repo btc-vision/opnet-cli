@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "opnetcli": {
+      "commandName": "Project",
+      "commandLineArgs": "createcontract -contractname:test -contractpath:c:/temp/contracts"
+    }
+  }
+}

@@ -1,0 +1,65 @@
+name: Build and Publish .NET 8 Solution
+
+# Trigger the workflow when a merge occurs into the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Publish
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        architecture: [x64, arm64]
+        exclude:
+          - os: windows-latest
+            architecture: arm64
+
+    steps:
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Setup .NET 8 SDK
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      # Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Build the solution
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
+
+      # Publish the solution as a single file
+      - name: Publish solution as single file
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [[ "${{ matrix.architecture }}" == "x64" ]]; then
+              dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true --property:PublishDir=./publish/linux-x64/
+            else
+              dotnet publish -c Release -r linux-arm64 --self-contained -p:PublishSingleFile=true --property:PublishDir=./publish/linux-arm64/
+            fi
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            if [[ "${{ matrix.architecture }}" == "x64" ]]; then
+              dotnet publish -c Release -r osx-x64 --self-contained -p:PublishSingleFile=true --property:PublishDir=./publish/osx-x64/
+            else
+              dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true --property:PublishDir=./publish/osx-arm64/
+            fi
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            dotnet publish -c Release -r win-x64 --self-contained --property:PublishDir=./publish/win-x64/
+          fi
+
+      # Upload artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Published-${{ matrix.os }}-${{ matrix.architecture }}
+          path: ./publish/

@@ -1,0 +1,36 @@
+{
+  "type": "module",
+  "name": "wasmer",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "gulp"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@btc-vision/bsi-binary": "^1.0.42",
+    "@btc-vision/logger": "^1.0.6",
+    "@btc-vision/op-vm": "^0.1.6",
+    "@btc-vision/transaction": "^1.0.105",
+    "@eslint/js": "^9.10.0",
+    "@types/node": "^22.5.5",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "bitcoinjs-lib": "github:btc-vision/bitcoinjs-lib",
+    "eslint": "^9.10.0",
+    "gulp": "^5.0.0",
+    "gulp-cached": "^1.1.1",
+    "gulp-clean": "^0.4.0",
+    "gulp-logger": "^0.0.2",
+    "gulp-typescript": "^6.0.0-alpha.1",
+    "opnet": "^1.0.51",
+    "prettier": "^3.3.2",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.5.0"
+  },
+  "devDependencies": {
+    "gulp-eslint-new": "^2.3.0"
+  }
+}
