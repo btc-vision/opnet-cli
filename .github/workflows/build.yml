@@ -82,7 +82,9 @@ jobs:
         run: |
           mkdir -p compressed_artifacts
           for artifact in ./publish/*; do
-            zip -r compressed_artifacts/$(basename $artifact).zip -j $artifact/*
+            cd $artifact
+            zip -r ../../compressed_artifacts/$(basename $artifact).zip ./*
+            cd -
           done
 
       # Upload all zip files from the compressed_artifacts folder
