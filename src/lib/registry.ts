@@ -6,38 +6,16 @@
  * @module lib/registry
  */
 
-import { getContract, BitcoinInterfaceAbi } from 'opnet';
+import { getContract } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 
 import { NetworkName, MLDSALevel, PluginPermissions, RegistryPluginType } from '../types/index.js';
 import { IPackageRegistry } from '../types/PackageRegistry.js';
 import { getProvider, getRegistryContractAddress } from './provider.js';
 import { getNetwork } from './wallet.js';
 import { loadConfig } from './config.js';
-
-// Load ABI from JSON file and convert to flat array format
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const abiPath = path.join(__dirname, 'PackageRegistry.abi.json');
-interface RawAbiJson {
-    functions: Array<{
-        name: string;
-        type: string;
-        inputs: Array<{ name: string; type: string }>;
-        outputs: Array<{ name: string; type: string }>;
-    }>;
-    events: Array<{
-        name: string;
-        type: string;
-        values: Array<{ name: string; type: string }>;
-    }>;
-}
-const rawAbi = JSON.parse(fs.readFileSync(abiPath, 'utf-8')) as RawAbiJson;
-// Flatten functions and events into a single array for BitcoinInterfaceAbi
-const REGISTRY_ABI = [...rawAbi.functions, ...rawAbi.events] as unknown as BitcoinInterfaceAbi;
+import { PACKAGE_REGISTRY_ABI } from './PackageRegistry.abi.js';
 
 /**
  * Scope information
