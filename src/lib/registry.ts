@@ -90,7 +90,7 @@ export function getRegistryContract(network?: NetworkName): IPackageRegistry {
 
     const contract = getContract<IPackageRegistry>(
         registryAddress,
-        REGISTRY_ABI,
+        PACKAGE_REGISTRY_ABI,
         provider,
         bitcoinNetwork,
     );
