@@ -74,32 +74,32 @@ export class LoginCommand extends BaseCommand {
     private async buildCredentials(options: LoginOptions): Promise<CLICredentials> {
         if (!isValidNetwork(options.network)) {
             this.exitWithError(`Invalid network: ${options.network}. Valid: mainnet, testnet, regtest`);
+            throw new Error('Unreachable'); // Helps TypeScript
         }
-        const network = options.network as NetworkName;
 
         const mldsaLevelNum = parseInt(options.mldsaLevel, 10);
         if (!isValidMldsaLevel(mldsaLevelNum)) {
             this.exitWithError(`Invalid MLDSA level: ${options.mldsaLevel}. Valid: 44, 65, 87`);
+            throw new Error('Unreachable'); // Helps TypeScript
         }
-        const mldsaLevel = mldsaLevelNum as MLDSALevel;
 
         if (options.mnemonic) {
             if (!validateMnemonic(options.mnemonic)) {
                 this.exitWithError('Invalid mnemonic phrase');
             }
-            return { mnemonic: options.mnemonic, mldsaLevel, network };
+            return { mnemonic: options.mnemonic, mldsaLevel: mldsaLevelNum, network: options.network };
         }
 
         if (options.wif && options.mldsa) {
             return {
                 wif: options.wif,
                 mldsaPrivateKey: options.mldsa,
-                mldsaLevel,
-                network,
+                mldsaLevel: mldsaLevelNum,
+                network: options.network,
             };
         }
 
-        return this.interactiveLogin(network, mldsaLevel);
+        return this.interactiveLogin(options.network, mldsaLevelNum);
     }
 
     private async interactiveLogin(

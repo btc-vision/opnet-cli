@@ -28,7 +28,7 @@ export class InfoCommand extends BaseCommand {
             .action((inputPath?: string, options?: InfoOptions) => this.execute(inputPath, options));
     }
 
-    private async execute(inputPath?: string, options?: InfoOptions): Promise<void> {
+    private execute(inputPath?: string, options?: InfoOptions): void {
         try {
             const targetPath = inputPath ? path.resolve(inputPath) : process.cwd();
 
@@ -208,7 +208,7 @@ export class InfoCommand extends BaseCommand {
         console.log(`  Source:         ${hasSrc ? 'Found' : 'Missing'}`);
         console.log(`  Dependencies:   ${hasNodeModules ? 'Installed' : 'Not installed'}`);
         console.log(
-            `  Compiled:       ${hasBinary ? `Yes (${formatFileSize(binarySize!)})` : 'No'}`,
+            `  Compiled:       ${hasBinary && binarySize !== null ? `Yes (${formatFileSize(binarySize)})` : 'No'}`,
         );
         console.log('');
 
@@ -216,11 +216,13 @@ export class InfoCommand extends BaseCommand {
         this.displayPermissions(manifest.permissions);
         console.log('');
 
-        console.log('Resources:');
-        console.log(`  Max Memory:     ${manifest.resources.maxMemoryMB} MB`);
-        console.log(`  Max CPU:        ${manifest.resources.maxCpuPercent}%`);
-        console.log(`  Max Storage:    ${manifest.resources.maxStorageMB} MB`);
-        console.log('');
+        if (manifest.resources) {
+            console.log('Resources:');
+            console.log(`  Max Memory:     ${manifest.resources.maxMemoryMB ?? 'N/A'} MB`);
+            console.log(`  Max CPU:        ${manifest.resources.maxCpuPercent ?? 'N/A'}%`);
+            console.log(`  Max Storage:    ${manifest.resources.maxStorageMB ?? 'N/A'} MB`);
+            console.log('');
+        }
 
         if (Object.keys(manifest.dependencies || {}).length > 0) {
             console.log('Plugin Dependencies:');
@@ -230,23 +232,26 @@ export class InfoCommand extends BaseCommand {
             console.log('');
         }
 
-        console.log('Lifecycle:');
-        console.log(`  Auto Start:     ${manifest.lifecycle.autoStart ? 'Yes' : 'No'}`);
-        console.log(`  Restart:        ${manifest.lifecycle.restartOnCrash ? 'Yes' : 'No'}`);
-        console.log(`  Max Restarts:   ${manifest.lifecycle.maxRestarts}`);
-        console.log('');
+        if (manifest.lifecycle) {
+            console.log('Lifecycle:');
+            console.log(`  Auto Start:     ${manifest.lifecycle.autoStart ? 'Yes' : 'No'}`);
+            console.log(`  Restart:        ${manifest.lifecycle.restartOnCrash ? 'Yes' : 'No'}`);
+            console.log(`  Max Restarts:   ${manifest.lifecycle.maxRestarts ?? 'N/A'}`);
+            console.log('');
+        }
     }
 
     private displayPermissions(permissions: PluginPermissions): void {
-        const db = permissions.database.enabled;
+        const db = permissions.database?.enabled ?? false;
         const blocks =
-            permissions.blocks.preProcess ||
-            permissions.blocks.postProcess ||
-            permissions.blocks.onChange;
-        const epochs = permissions.epochs.onChange || permissions.epochs.onFinalized;
-        const mempool = permissions.mempool.txFeed;
-        const api = permissions.api.addEndpoints || permissions.api.addWebsocket;
-        const fsPerms = permissions.filesystem.configDir || permissions.filesystem.tempDir;
+            permissions.blocks?.preProcess ||
+            permissions.blocks?.postProcess ||
+            permissions.blocks?.onChange ||
+            false;
+        const epochs = permissions.epochs?.onChange || permissions.epochs?.onFinalized || false;
+        const mempool = permissions.mempool?.txFeed ?? false;
+        const api = permissions.api?.addEndpoints || permissions.api?.addWebsocket || false;
+        const fsPerms = permissions.filesystem?.configDir || permissions.filesystem?.tempDir || false;
 
         console.log(`  Database:       ${db ? 'Yes' : 'No'}`);
         console.log(`  Block Hooks:    ${blocks ? 'Yes' : 'No'}`);

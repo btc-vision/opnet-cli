@@ -1,0 +1,765 @@
+{
+    "functions": [
+        {
+            "name": "setTreasuryAddress",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "treasuryAddress",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "setScopePrice",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "priceSats",
+                    "type": "UINT64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "setPackagePrice",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "priceSats",
+                    "type": "UINT64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "registerScope",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "initiateScopeTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "acceptScopeTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "cancelScopeTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "registerPackage",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "publishVersion",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "version",
+                    "type": "STRING"
+                },
+                {
+                    "name": "ipfsCid",
+                    "type": "STRING"
+                },
+                {
+                    "name": "checksum",
+                    "type": "BYTES32"
+                },
+                {
+                    "name": "signature",
+                    "type": "BYTES"
+                },
+                {
+                    "name": "mldsaLevel",
+                    "type": "UINT8"
+                },
+                {
+                    "name": "opnetVersionRange",
+                    "type": "STRING"
+                },
+                {
+                    "name": "pluginType",
+                    "type": "UINT8"
+                },
+                {
+                    "name": "permissionsHash",
+                    "type": "BYTES32"
+                },
+                {
+                    "name": "dependencies",
+                    "type": "BYTES"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "deprecateVersion",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "version",
+                    "type": "STRING"
+                },
+                {
+                    "name": "reason",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "undeprecateVersion",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "version",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "initiateTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "acceptTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "cancelTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "getScope",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "exists",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "createdAt",
+                    "type": "UINT64"
+                }
+            ]
+        },
+        {
+            "name": "getScopeOwner",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "getPackage",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "exists",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "createdAt",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "versionCount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "latestVersion",
+                    "type": "STRING"
+                }
+            ]
+        },
+        {
+            "name": "getOwner",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "getVersion",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "version",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "exists",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "ipfsCid",
+                    "type": "STRING"
+                },
+                {
+                    "name": "checksum",
+                    "type": "BYTES32"
+                },
+                {
+                    "name": "sigHash",
+                    "type": "BYTES32"
+                },
+                {
+                    "name": "mldsaLevel",
+                    "type": "UINT8"
+                },
+                {
+                    "name": "opnetVersionRange",
+                    "type": "STRING"
+                },
+                {
+                    "name": "pluginType",
+                    "type": "UINT8"
+                },
+                {
+                    "name": "permissionsHash",
+                    "type": "BYTES32"
+                },
+                {
+                    "name": "depsHash",
+                    "type": "BYTES32"
+                },
+                {
+                    "name": "publisher",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "publishedAt",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "deprecated",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "isDeprecated",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "version",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "deprecated",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "isImmutable",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                },
+                {
+                    "name": "version",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "immutable",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getPendingTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "packageName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "pendingOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "initiatedAt",
+                    "type": "UINT64"
+                }
+            ]
+        },
+        {
+            "name": "getPendingScopeTransfer",
+            "type": "Function",
+            "inputs": [
+                {
+                    "name": "scopeName",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "pendingOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "initiatedAt",
+                    "type": "UINT64"
+                }
+            ]
+        },
+        {
+            "name": "getTreasuryAddress",
+            "type": "Function",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "treasuryAddress",
+                    "type": "STRING"
+                }
+            ]
+        },
+        {
+            "name": "getScopePrice",
+            "type": "Function",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "priceSats",
+                    "type": "UINT64"
+                }
+            ]
+        },
+        {
+            "name": "getPackagePrice",
+            "type": "Function",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "priceSats",
+                    "type": "UINT64"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "TreasuryAddressChanged",
+            "values": [
+                {
+                    "name": "previousAddressHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "newAddressHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ScopePriceChanged",
+            "values": [
+                {
+                    "name": "oldPrice",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "newPrice",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "PackagePriceChanged",
+            "values": [
+                {
+                    "name": "oldPrice",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "newPrice",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ScopeRegistered",
+            "values": [
+                {
+                    "name": "scopeHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ScopeTransferInitiated",
+            "values": [
+                {
+                    "name": "scopeHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "currentOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ScopeTransferCompleted",
+            "values": [
+                {
+                    "name": "scopeHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "previousOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ScopeTransferCancelled",
+            "values": [
+                {
+                    "name": "scopeHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "PackageRegistered",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "VersionPublished",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "versionHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "publisher",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "checksum",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                },
+                {
+                    "name": "mldsaLevel",
+                    "type": "UINT8"
+                },
+                {
+                    "name": "pluginType",
+                    "type": "UINT8"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "VersionDeprecated",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "versionHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "VersionUndeprecated",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "versionHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "PackageTransferInitiated",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "currentOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "PackageTransferCompleted",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "previousOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "PackageTransferCancelled",
+            "values": [
+                {
+                    "name": "packageHash",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "UINT64"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

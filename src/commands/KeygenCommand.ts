@@ -74,12 +74,12 @@ export class KeygenCommand extends BaseCommand {
             const levelNum = parseInt(options.level, 10);
             if (!isValidMldsaLevel(levelNum)) {
                 this.exitWithError(`Invalid MLDSA level: ${options.level}. Valid: 44, 65, 87`);
+                return; // Unreachable, but helps TypeScript
             }
 
-            const level = levelNum as MLDSALevel;
-            this.logger.info(`Generating MLDSA-${level} keypair...`);
+            this.logger.info(`Generating MLDSA-${levelNum} keypair...`);
 
-            const keypair = generateMLDSAKeypair(level);
+            const keypair = generateMLDSAKeypair(levelNum);
             const publicKeyHash = computePublicKeyHash(keypair.publicKey);
 
             if (options.output) {
@@ -103,7 +103,7 @@ export class KeygenCommand extends BaseCommand {
 
             } else if (options.json) {
                 const output = {
-                    level,
+                    level: levelNum,
                     privateKey: keypair.privateKey.toString('hex'),
                     publicKey: keypair.publicKey.toString('hex'),
                     publicKeyHash,
@@ -113,7 +113,7 @@ export class KeygenCommand extends BaseCommand {
                 console.log(JSON.stringify(output, null, 2));
 
             } else {
-                this.logger.info(`\nMLDSA-${level} Keypair:\n`);
+                this.logger.info(`\nMLDSA-${levelNum} Keypair:\n`);
                 console.log(`Public Key Hash: ${publicKeyHash}`);
                 console.log(`Public Key Size: ${keypair.publicKey.length} bytes`);
                 console.log(`Private Key Size: ${keypair.privateKey.length} bytes`);

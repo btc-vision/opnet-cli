@@ -35,8 +35,9 @@ export function getProvider(network?: NetworkName): JSONRpcProvider {
     const cacheKey = `${targetNetwork}:${rpcUrl}`;
 
     // Return cached provider if available
-    if (providerCache.has(cacheKey)) {
-        return providerCache.get(cacheKey)!;
+    const cached = providerCache.get(cacheKey);
+    if (cached) {
+        return cached;
     }
 
     // Create new provider

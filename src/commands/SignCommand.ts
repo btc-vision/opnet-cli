@@ -29,7 +29,7 @@ export class SignCommand extends BaseCommand {
             .action((file: string, options: SignOptions) => this.execute(file, options));
     }
 
-    private async execute(file: string, options: SignOptions): Promise<void> {
+    private execute(file: string, options: SignOptions): void {
         try {
             if (!fs.existsSync(file)) {
                 this.exitWithError(`File not found: ${file}`);

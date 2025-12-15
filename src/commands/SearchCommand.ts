@@ -5,7 +5,7 @@
  */
 
 import { BaseCommand } from './BaseCommand.js';
-import { getPackage, getVersion, registryToMldsaLevel, registryToPluginType } from '../lib/registry.js';
+import { getPackage, getVersion, registryToMldsaLevel, registryToPluginType, VersionInfo } from '../lib/registry.js';
 import { NetworkName } from '../types/index.js';
 
 interface SearchOptions {
@@ -55,7 +55,7 @@ export class SearchCommand extends BaseCommand {
             }
 
             // Get latest version details
-            let latestVersionInfo = null;
+            let latestVersionInfo: VersionInfo | null = null;
             if (packageInfo.latestVersion) {
                 latestVersionInfo = await getVersion(query, packageInfo.latestVersion, network);
             }

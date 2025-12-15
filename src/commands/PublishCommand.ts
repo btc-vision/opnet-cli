@@ -53,7 +53,9 @@ export class PublishCommand extends BaseCommand {
             if (!binaryPath) {
                 const manifestPath = path.join(process.cwd(), 'plugin.json');
                 if (fs.existsSync(manifestPath)) {
-                    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+                    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as {
+                        name: string;
+                    };
                     const name = manifest.name.replace(/^@/, '').replace(/\//g, '-');
                     binaryPath = path.join(process.cwd(), 'build', `${name}.opnet`);
                 }

@@ -79,7 +79,8 @@ program.exitOverride((err) => {
 });
 
 // Parse command line arguments
-program.parseAsync(process.argv).catch((error: Error) => {
-    logger.error(`Error: ${error.message}`);
+program.parseAsync(process.argv).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Error: ${message}`);
     process.exit(1);
 });

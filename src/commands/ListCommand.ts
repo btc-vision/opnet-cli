@@ -141,7 +141,7 @@ export class ListCommand extends BaseCommand {
                 const sizeWidth = 10;
 
                 this.logger.info(
-                    `${'Name'.padEnd(nameWidth)}${'Version'.padEnd(versionWidth)}${'Type'.padEnd(typeWidth)}${'Size'.padEnd(sizeWidth)}${'Signed'}`,
+                    'Name'.padEnd(nameWidth) + 'Version'.padEnd(versionWidth) + 'Type'.padEnd(typeWidth) + 'Size'.padEnd(sizeWidth) + 'Signed',
                 );
                 this.logger.info('─'.repeat(nameWidth + versionWidth + typeWidth + sizeWidth + 8));
 

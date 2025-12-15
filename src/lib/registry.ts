@@ -6,335 +6,38 @@
  * @module lib/registry
  */
 
-import { Contract, BitcoinInterface, JSONRpcProvider, CallResult } from 'opnet';
-import { Network } from '@btc-vision/bitcoin';
+import { getContract } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 import { NetworkName, MLDSALevel, PluginPermissions, RegistryPluginType } from '../types/index.js';
+import { IPackageRegistry } from '../types/PackageRegistry.js';
 import { getProvider, getRegistryContractAddress } from './provider.js';
 import { getNetwork } from './wallet.js';
 import { loadConfig } from './config.js';
 
-/**
- * PackageRegistry ABI definition
- */
-const REGISTRY_ABI = {
-    functions: [
-        {
-            name: 'registerScope',
-            type: 'Function',
-            inputs: [{ name: 'scopeName', type: 'STRING' }],
-            outputs: [],
-        },
-        {
-            name: 'initiateScopeTransfer',
-            type: 'Function',
-            inputs: [
-                { name: 'scopeName', type: 'STRING' },
-                { name: 'newOwner', type: 'ADDRESS' },
-            ],
-            outputs: [],
-        },
-        {
-            name: 'acceptScopeTransfer',
-            type: 'Function',
-            inputs: [{ name: 'scopeName', type: 'STRING' }],
-            outputs: [],
-        },
-        {
-            name: 'cancelScopeTransfer',
-            type: 'Function',
-            inputs: [{ name: 'scopeName', type: 'STRING' }],
-            outputs: [],
-        },
-        {
-            name: 'registerPackage',
-            type: 'Function',
-            inputs: [{ name: 'packageName', type: 'STRING' }],
-            outputs: [],
-        },
-        {
-            name: 'publishVersion',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'version', type: 'STRING' },
-                { name: 'ipfsCid', type: 'STRING' },
-                { name: 'checksum', type: 'BYTES32' },
-                { name: 'signature', type: 'BYTES' },
-                { name: 'mldsaLevel', type: 'UINT8' },
-                { name: 'opnetVersionRange', type: 'STRING' },
-                { name: 'pluginType', type: 'UINT8' },
-                { name: 'permissionsHash', type: 'BYTES32' },
-                { name: 'dependencies', type: 'BYTES' },
-            ],
-            outputs: [],
-        },
-        {
-            name: 'deprecateVersion',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'version', type: 'STRING' },
-                { name: 'reason', type: 'STRING' },
-            ],
-            outputs: [],
-        },
-        {
-            name: 'undeprecateVersion',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'version', type: 'STRING' },
-            ],
-            outputs: [],
-        },
-        {
-            name: 'initiateTransfer',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'newOwner', type: 'ADDRESS' },
-            ],
-            outputs: [],
-        },
-        {
-            name: 'acceptTransfer',
-            type: 'Function',
-            inputs: [{ name: 'packageName', type: 'STRING' }],
-            outputs: [],
-        },
-        {
-            name: 'cancelTransfer',
-            type: 'Function',
-            inputs: [{ name: 'packageName', type: 'STRING' }],
-            outputs: [],
-        },
-        {
-            name: 'getScope',
-            type: 'Function',
-            inputs: [{ name: 'scopeName', type: 'STRING' }],
-            outputs: [
-                { name: 'exists', type: 'BOOL' },
-                { name: 'owner', type: 'ADDRESS' },
-                { name: 'createdAt', type: 'UINT64' },
-            ],
-        },
-        {
-            name: 'getScopeOwner',
-            type: 'Function',
-            inputs: [{ name: 'scopeName', type: 'STRING' }],
-            outputs: [{ name: 'owner', type: 'ADDRESS' }],
-        },
-        {
-            name: 'getPackage',
-            type: 'Function',
-            inputs: [{ name: 'packageName', type: 'STRING' }],
-            outputs: [
-                { name: 'exists', type: 'BOOL' },
-                { name: 'owner', type: 'ADDRESS' },
-                { name: 'createdAt', type: 'UINT64' },
-                { name: 'versionCount', type: 'UINT256' },
-                { name: 'latestVersion', type: 'STRING' },
-            ],
-        },
-        {
-            name: 'getOwner',
-            type: 'Function',
-            inputs: [{ name: 'packageName', type: 'STRING' }],
-            outputs: [{ name: 'owner', type: 'ADDRESS' }],
-        },
-        {
-            name: 'getVersion',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'version', type: 'STRING' },
-            ],
-            outputs: [
-                { name: 'exists', type: 'BOOL' },
-                { name: 'ipfsCid', type: 'STRING' },
-                { name: 'checksum', type: 'BYTES32' },
-                { name: 'sigHash', type: 'BYTES32' },
-                { name: 'mldsaLevel', type: 'UINT8' },
-                { name: 'opnetVersionRange', type: 'STRING' },
-                { name: 'pluginType', type: 'UINT8' },
-                { name: 'permissionsHash', type: 'BYTES32' },
-                { name: 'depsHash', type: 'BYTES32' },
-                { name: 'publisher', type: 'ADDRESS' },
-                { name: 'publishedAt', type: 'UINT64' },
-                { name: 'deprecated', type: 'BOOL' },
-            ],
-        },
-        {
-            name: 'isDeprecated',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'version', type: 'STRING' },
-            ],
-            outputs: [{ name: 'deprecated', type: 'BOOL' }],
-        },
-        {
-            name: 'isImmutable',
-            type: 'Function',
-            inputs: [
-                { name: 'packageName', type: 'STRING' },
-                { name: 'version', type: 'STRING' },
-            ],
-            outputs: [{ name: 'immutable', type: 'BOOL' }],
-        },
-        {
-            name: 'getPendingTransfer',
-            type: 'Function',
-            inputs: [{ name: 'packageName', type: 'STRING' }],
-            outputs: [
-                { name: 'pendingOwner', type: 'ADDRESS' },
-                { name: 'initiatedAt', type: 'UINT64' },
-            ],
-        },
-        {
-            name: 'getPendingScopeTransfer',
-            type: 'Function',
-            inputs: [{ name: 'scopeName', type: 'STRING' }],
-            outputs: [
-                { name: 'pendingOwner', type: 'ADDRESS' },
-                { name: 'initiatedAt', type: 'UINT64' },
-            ],
-        },
-        {
-            name: 'getTreasuryAddress',
-            type: 'Function',
-            inputs: [],
-            outputs: [{ name: 'treasuryAddress', type: 'STRING' }],
-        },
-        {
-            name: 'getScopePrice',
-            type: 'Function',
-            inputs: [],
-            outputs: [{ name: 'priceSats', type: 'UINT64' }],
-        },
-        {
-            name: 'getPackagePrice',
-            type: 'Function',
-            inputs: [],
-            outputs: [{ name: 'priceSats', type: 'UINT64' }],
-        },
-    ],
-    events: [
-        {
-            name: 'ScopeRegistered',
-            values: [
-                { name: 'scopeHash', type: 'UINT256' },
-                { name: 'owner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'PackageRegistered',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'owner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'VersionPublished',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'versionHash', type: 'UINT256' },
-                { name: 'publisher', type: 'ADDRESS' },
-                { name: 'checksum', type: 'UINT256' },
-                { name: 'timestamp', type: 'UINT64' },
-                { name: 'mldsaLevel', type: 'UINT8' },
-                { name: 'pluginType', type: 'UINT8' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'VersionDeprecated',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'versionHash', type: 'UINT256' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'VersionUndeprecated',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'versionHash', type: 'UINT256' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'PackageTransferInitiated',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'currentOwner', type: 'ADDRESS' },
-                { name: 'newOwner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'PackageTransferCompleted',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'previousOwner', type: 'ADDRESS' },
-                { name: 'newOwner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'PackageTransferCancelled',
-            values: [
-                { name: 'packageHash', type: 'UINT256' },
-                { name: 'owner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'ScopeTransferInitiated',
-            values: [
-                { name: 'scopeHash', type: 'UINT256' },
-                { name: 'currentOwner', type: 'ADDRESS' },
-                { name: 'newOwner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'ScopeTransferCompleted',
-            values: [
-                { name: 'scopeHash', type: 'UINT256' },
-                { name: 'previousOwner', type: 'ADDRESS' },
-                { name: 'newOwner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-        {
-            name: 'ScopeTransferCancelled',
-            values: [
-                { name: 'scopeHash', type: 'UINT256' },
-                { name: 'owner', type: 'ADDRESS' },
-                { name: 'timestamp', type: 'UINT64' },
-            ],
-            type: 'Event',
-        },
-    ],
+// Load ABI from JSON file
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const abiPath = path.join(__dirname, 'PackageRegistry.abi.json');
+const REGISTRY_ABI = JSON.parse(fs.readFileSync(abiPath, 'utf-8')) as {
+    functions: Array<{
+        name: string;
+        type: string;
+        inputs: Array<{ name: string; type: string }>;
+        outputs: Array<{ name: string; type: string }>;
+    }>;
+    events: Array<{
+        name: string;
+        type: string;
+        values: Array<{ name: string; type: string }>;
+    }>;
 };
 
 /**
- * Scope information from registry
+ * Scope information
  */
 export interface ScopeInfo {
     exists: boolean;
@@ -343,7 +46,7 @@ export interface ScopeInfo {
 }
 
 /**
- * Package information from registry
+ * Package information
  */
 export interface PackageInfo {
     exists: boolean;
@@ -354,7 +57,7 @@ export interface PackageInfo {
 }
 
 /**
- * Version information from registry
+ * Version information
  */
 export interface VersionInfo {
     exists: boolean;
@@ -374,76 +77,37 @@ export interface VersionInfo {
 /**
  * Pending transfer information
  */
-export interface PendingTransfer {
+export interface PendingTransferInfo {
     pendingOwner: Address;
     initiatedAt: bigint;
 }
 
 /**
- * Registry contract interface
- */
-interface IPackageRegistry extends BitcoinInterface {
-    registerScope(scopeName: string): Promise<CallResult>;
-    initiateScopeTransfer(scopeName: string, newOwner: Address): Promise<CallResult>;
-    acceptScopeTransfer(scopeName: string): Promise<CallResult>;
-    cancelScopeTransfer(scopeName: string): Promise<CallResult>;
-    registerPackage(packageName: string): Promise<CallResult>;
-    publishVersion(
-        packageName: string,
-        version: string,
-        ipfsCid: string,
-        checksum: Uint8Array,
-        signature: Uint8Array,
-        mldsaLevel: number,
-        opnetVersionRange: string,
-        pluginType: number,
-        permissionsHash: Uint8Array,
-        dependencies: Uint8Array,
-    ): Promise<CallResult>;
-    deprecateVersion(packageName: string, version: string, reason: string): Promise<CallResult>;
-    undeprecateVersion(packageName: string, version: string): Promise<CallResult>;
-    initiateTransfer(packageName: string, newOwner: Address): Promise<CallResult>;
-    acceptTransfer(packageName: string): Promise<CallResult>;
-    cancelTransfer(packageName: string): Promise<CallResult>;
-    getScope(scopeName: string): Promise<CallResult>;
-    getScopeOwner(scopeName: string): Promise<CallResult>;
-    getPackage(packageName: string): Promise<CallResult>;
-    getOwner(packageName: string): Promise<CallResult>;
-    getVersion(packageName: string, version: string): Promise<CallResult>;
-    isDeprecated(packageName: string, version: string): Promise<CallResult>;
-    isImmutable(packageName: string, version: string): Promise<CallResult>;
-    getPendingTransfer(packageName: string): Promise<CallResult>;
-    getPendingScopeTransfer(scopeName: string): Promise<CallResult>;
-    getTreasuryAddress(): Promise<CallResult>;
-    getScopePrice(): Promise<CallResult>;
-    getPackagePrice(): Promise<CallResult>;
-}
-
-/**
  * Registry contract cache
  */
-const registryCache = new Map<string, Contract<IPackageRegistry>>();
+const registryCache = new Map<string, IPackageRegistry>();
 
 /**
- * Get the PackageRegistry contract instance
+ * Get the registry contract instance
  *
  * @param network - Network name (defaults to configured default)
  * @returns Contract instance
  */
-export function getRegistryContract(network?: NetworkName): Contract<IPackageRegistry> {
+export function getRegistryContract(network?: NetworkName): IPackageRegistry {
     const config = loadConfig();
     const targetNetwork = network || config.defaultNetwork;
     const cacheKey = targetNetwork;
 
-    if (registryCache.has(cacheKey)) {
-        return registryCache.get(cacheKey)!;
+    const cached = registryCache.get(cacheKey);
+    if (cached) {
+        return cached;
     }
 
     const provider = getProvider(targetNetwork);
     const registryAddress = getRegistryContractAddress(targetNetwork);
     const bitcoinNetwork = getNetwork(targetNetwork);
 
-    const contract = new Contract<IPackageRegistry>(
+    const contract = getContract<IPackageRegistry>(
         registryAddress,
         REGISTRY_ABI,
         provider,
@@ -472,15 +136,14 @@ export async function getScope(scopeName: string, network?: NetworkName): Promis
     const contract = getRegistryContract(network);
     const result = await contract.getScope(scopeName);
 
-    const exists = result.decoded.obj['exists'] as boolean;
-    if (!exists) {
+    if (!result.properties.exists) {
         return null;
     }
 
     return {
-        exists,
-        owner: result.decoded.obj['owner'] as Address,
-        createdAt: result.decoded.obj['createdAt'] as bigint,
+        exists: result.properties.exists,
+        owner: result.properties.owner,
+        createdAt: result.properties.createdAt,
     };
 }
 
@@ -498,7 +161,7 @@ export async function getScopeOwner(
     const contract = getRegistryContract(network);
     try {
         const result = await contract.getScopeOwner(scopeName);
-        return result.decoded.obj['owner'] as Address;
+        return result.properties.owner;
     } catch {
         return null;
     }
@@ -518,17 +181,16 @@ export async function getPackage(
     const contract = getRegistryContract(network);
     const result = await contract.getPackage(packageName);
 
-    const exists = result.decoded.obj['exists'] as boolean;
-    if (!exists) {
+    if (!result.properties.exists) {
         return null;
     }
 
     return {
-        exists,
-        owner: result.decoded.obj['owner'] as Address,
-        createdAt: result.decoded.obj['createdAt'] as bigint,
-        versionCount: result.decoded.obj['versionCount'] as bigint,
-        latestVersion: result.decoded.obj['latestVersion'] as string,
+        exists: result.properties.exists,
+        owner: result.properties.owner,
+        createdAt: result.properties.createdAt,
+        versionCount: result.properties.versionCount,
+        latestVersion: result.properties.latestVersion,
     };
 }
 
@@ -546,7 +208,7 @@ export async function getPackageOwner(
     const contract = getRegistryContract(network);
     try {
         const result = await contract.getOwner(packageName);
-        return result.decoded.obj['owner'] as Address;
+        return result.properties.owner;
     } catch {
         return null;
     }
@@ -568,24 +230,23 @@ export async function getVersion(
     const contract = getRegistryContract(network);
     const result = await contract.getVersion(packageName, version);
 
-    const exists = result.decoded.obj['exists'] as boolean;
-    if (!exists) {
+    if (!result.properties.exists) {
         return null;
     }
 
     return {
-        exists,
-        ipfsCid: result.decoded.obj['ipfsCid'] as string,
-        checksum: result.decoded.obj['checksum'] as Uint8Array,
-        sigHash: result.decoded.obj['sigHash'] as Uint8Array,
-        mldsaLevel: result.decoded.obj['mldsaLevel'] as number,
-        opnetVersionRange: result.decoded.obj['opnetVersionRange'] as string,
-        pluginType: result.decoded.obj['pluginType'] as number,
-        permissionsHash: result.decoded.obj['permissionsHash'] as Uint8Array,
-        depsHash: result.decoded.obj['depsHash'] as Uint8Array,
-        publisher: result.decoded.obj['publisher'] as Address,
-        publishedAt: result.decoded.obj['publishedAt'] as bigint,
-        deprecated: result.decoded.obj['deprecated'] as boolean,
+        exists: result.properties.exists,
+        ipfsCid: result.properties.ipfsCid,
+        checksum: result.properties.checksum,
+        sigHash: result.properties.sigHash,
+        mldsaLevel: result.properties.mldsaLevel,
+        opnetVersionRange: result.properties.opnetVersionRange,
+        pluginType: result.properties.pluginType,
+        permissionsHash: result.properties.permissionsHash,
+        depsHash: result.properties.depsHash,
+        publisher: result.properties.publisher,
+        publishedAt: result.properties.publishedAt,
+        deprecated: result.properties.deprecated,
     };
 }
 
@@ -604,7 +265,7 @@ export async function isVersionDeprecated(
 ): Promise<boolean> {
     const contract = getRegistryContract(network);
     const result = await contract.isDeprecated(packageName, version);
-    return result.decoded.obj['deprecated'] as boolean;
+    return result.properties.deprecated;
 }
 
 /**
@@ -622,7 +283,7 @@ export async function isVersionImmutable(
 ): Promise<boolean> {
     const contract = getRegistryContract(network);
     const result = await contract.isImmutable(packageName, version);
-    return result.decoded.obj['immutable'] as boolean;
+    return result.properties.immutable;
 }
 
 /**
@@ -635,19 +296,24 @@ export async function isVersionImmutable(
 export async function getPendingTransfer(
     packageName: string,
     network?: NetworkName,
-): Promise<PendingTransfer | null> {
+): Promise<PendingTransferInfo | null> {
     const contract = getRegistryContract(network);
-    const result = await contract.getPendingTransfer(packageName);
+    try {
+        const result = await contract.getPendingTransfer(packageName);
+        const pendingOwner = result.properties.pendingOwner;
 
-    const initiatedAt = result.decoded.obj['initiatedAt'] as bigint;
-    if (initiatedAt === 0n) {
+        // Check if there's actually a pending transfer (address not zero)
+        if (!pendingOwner || pendingOwner.toString() === '0'.repeat(64)) {
+            return null;
+        }
+
+        return {
+            pendingOwner,
+            initiatedAt: result.properties.initiatedAt,
+        };
+    } catch {
         return null;
     }
-
-    return {
-        pendingOwner: result.decoded.obj['pendingOwner'] as Address,
-        initiatedAt,
-    };
 }
 
 /**
@@ -660,35 +326,40 @@ export async function getPendingTransfer(
 export async function getPendingScopeTransfer(
     scopeName: string,
     network?: NetworkName,
-): Promise<PendingTransfer | null> {
+): Promise<PendingTransferInfo | null> {
     const contract = getRegistryContract(network);
-    const result = await contract.getPendingScopeTransfer(scopeName);
+    try {
+        const result = await contract.getPendingScopeTransfer(scopeName);
+        const pendingOwner = result.properties.pendingOwner;
 
-    const initiatedAt = result.decoded.obj['initiatedAt'] as bigint;
-    if (initiatedAt === 0n) {
+        // Check if there's actually a pending transfer (address not zero)
+        if (!pendingOwner || pendingOwner.toString() === '0'.repeat(64)) {
+            return null;
+        }
+
+        return {
+            pendingOwner,
+            initiatedAt: result.properties.initiatedAt,
+        };
+    } catch {
         return null;
     }
-
-    return {
-        pendingOwner: result.decoded.obj['pendingOwner'] as Address,
-        initiatedAt,
-    };
 }
 
 /**
- * Get the treasury address for payments
+ * Get treasury address
  *
  * @param network - Network name
- * @returns Treasury address
+ * @returns Treasury address string
  */
 export async function getTreasuryAddress(network?: NetworkName): Promise<string> {
     const contract = getRegistryContract(network);
     const result = await contract.getTreasuryAddress();
-    return result.decoded.obj['treasuryAddress'] as string;
+    return result.properties.treasuryAddress;
 }
 
 /**
- * Get the price to register a scope (in satoshis)
+ * Get scope registration price
  *
  * @param network - Network name
  * @returns Price in satoshis
@@ -696,11 +367,11 @@ export async function getTreasuryAddress(network?: NetworkName): Promise<string>
 export async function getScopePrice(network?: NetworkName): Promise<bigint> {
     const contract = getRegistryContract(network);
     const result = await contract.getScopePrice();
-    return result.decoded.obj['priceSats'] as bigint;
+    return result.properties.priceSats;
 }
 
 /**
- * Get the price to register an unscoped package (in satoshis)
+ * Get package registration price
  *
  * @param network - Network name
  * @returns Price in satoshis
@@ -708,34 +379,33 @@ export async function getScopePrice(network?: NetworkName): Promise<bigint> {
 export async function getPackagePrice(network?: NetworkName): Promise<bigint> {
     const contract = getRegistryContract(network);
     const result = await contract.getPackagePrice();
-    return result.decoded.obj['priceSats'] as bigint;
+    return result.properties.priceSats;
 }
 
 /**
- * Parse a package name into scope and name components
+ * Parse a package name into scope and name
  *
- * @param packageName - Full package name
+ * @param fullName - Full package name (e.g., "@scope/name" or "name")
  * @returns Object with scope (or null) and name
  */
-export function parsePackageName(packageName: string): { scope: string | null; name: string } {
-    if (packageName.startsWith('@')) {
-        const slashIndex = packageName.indexOf('/');
-        if (slashIndex === -1) {
-            throw new Error(`Invalid scoped package name: ${packageName}`);
+export function parsePackageName(fullName: string): { scope: string | null; name: string } {
+    if (fullName.startsWith('@')) {
+        const slashIndex = fullName.indexOf('/');
+        if (slashIndex > 0) {
+            return {
+                scope: fullName.substring(1, slashIndex),
+                name: fullName.substring(slashIndex + 1),
+            };
         }
-        return {
-            scope: packageName.substring(1, slashIndex),
-            name: packageName.substring(slashIndex + 1),
-        };
     }
-    return { scope: null, name: packageName };
+    return { scope: null, name: fullName };
 }
 
 /**
- * Compute SHA-256 hash of permissions for storage
+ * Compute permissions hash from permissions object
  *
- * @param permissions - Plugin permissions object
- * @returns 32-byte hash
+ * @param permissions - Plugin permissions
+ * @returns SHA-256 hash as Uint8Array
  */
 export function computePermissionsHash(permissions: PluginPermissions): Uint8Array {
     const json = JSON.stringify(permissions);
@@ -744,79 +414,66 @@ export function computePermissionsHash(permissions: PluginPermissions): Uint8Arr
 }
 
 /**
- * Encode dependencies for storage
+ * Encode dependencies for publishing
  *
- * @param dependencies - Dependencies map (name -> version range)
- * @returns Encoded dependencies bytes
+ * @param dependencies - Dependencies map { name: version }
+ * @returns Encoded dependencies as Uint8Array
  */
 export function encodeDependencies(dependencies: Record<string, string>): Uint8Array {
+    if (Object.keys(dependencies).length === 0) {
+        return new Uint8Array(0);
+    }
+
     const json = JSON.stringify(dependencies);
     return new Uint8Array(Buffer.from(json, 'utf-8'));
 }
 
 /**
- * Decode dependencies from storage
+ * Convert registry MLDSA level (1, 2, 3) to actual level (44, 65, 87)
  *
- * @param data - Encoded dependencies bytes
- * @returns Dependencies map
- */
-export function decodeDependencies(data: Uint8Array): Record<string, string> {
-    const json = Buffer.from(data).toString('utf-8');
-    return JSON.parse(json) as Record<string, string>;
-}
-
-/**
- * Convert CLI plugin type to registry constant
- *
- * @param pluginType - Plugin type string
- * @returns Registry plugin type constant
- */
-export function pluginTypeToRegistry(pluginType: 'standalone' | 'library'): RegistryPluginType {
-    return pluginType === 'standalone' ? 1 : 2;
-}
-
-/**
- * Convert registry plugin type to CLI string
- *
- * @param registryType - Registry plugin type constant
- * @returns Plugin type string
- */
-export function registryToPluginType(registryType: number): 'standalone' | 'library' {
-    return registryType === 1 ? 'standalone' : 'library';
-}
-
-/**
- * Convert CLI MLDSA level to registry constant
- *
- * @param level - CLI MLDSA level (44, 65, 87)
- * @returns Registry MLDSA level constant (1, 2, 3)
- */
-export function mldsaLevelToRegistry(level: MLDSALevel): number {
-    switch (level) {
-        case 44:
-            return 1;
-        case 65:
-            return 2;
-        case 87:
-            return 3;
-    }
-}
-
-/**
- * Convert registry MLDSA level to CLI level
- *
- * @param registryLevel - Registry MLDSA level (1, 2, 3)
- * @returns CLI MLDSA level (44, 65, 87)
+ * @param registryLevel - Registry level (1, 2, 3)
+ * @returns MLDSA level (44, 65, 87)
  */
 export function registryToMldsaLevel(registryLevel: number): MLDSALevel {
-    switch (registryLevel) {
-        case 1:
-            return 44;
-        case 2:
-            return 65;
-        case 3:
-            return 87;
-        default:
-            throw new Error(`Invalid registry MLDSA level: ${registryLevel}`);
-    }
+    const levels: Record<number, MLDSALevel> = {
+        1: 44,
+        2: 65,
+        3: 87,
+    };
+    return levels[registryLevel] || 44;
+}
+
+/**
+ * Convert MLDSA level (44, 65, 87) to registry level (1, 2, 3)
+ *
+ * @param mldsaLevel - MLDSA level (44, 65, 87)
+ * @returns Registry level (1, 2, 3)
+ */
+export function mldsaLevelToRegistry(mldsaLevel: MLDSALevel): number {
+    const levels: Record<MLDSALevel, number> = {
+        44: 1,
+        65: 2,
+        87: 3,
+    };
+    return levels[mldsaLevel] || 1;
+}
+
+/**
+ * Convert registry plugin type (1, 2) to string
+ *
+ * @param registryType - Registry plugin type (1, 2)
+ * @returns Plugin type string
+ */
+export function registryToPluginType(registryType: number): RegistryPluginType {
+    return registryType === 2 ? 'library' : 'standalone';
+}
+
+/**
+ * Convert plugin type string to registry value
+ *
+ * @param pluginType - Plugin type string
+ * @returns Registry plugin type (1, 2)
+ */
+export function pluginTypeToRegistry(pluginType: RegistryPluginType): number {
+    return pluginType === 'library' ? 2 : 1;
 }
