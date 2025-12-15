@@ -58,7 +58,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.1",
-        "@types/node": "^24.3.0",
+        "@types/node": "^25.0.2",
         "eslint": "^9.39.1",
         "gulp": "^5.0.1",
         "gulp-cached": "^1.1.1",
