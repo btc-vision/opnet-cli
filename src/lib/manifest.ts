@@ -9,15 +9,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-    IPluginMetadata,
-    IPluginPermissions,
-    validateManifest as sdkValidateManifest,
-    IValidationResult,
-    PLUGIN_NAME_REGEX,
-    PLUGIN_MANIFEST_FILENAME,
+    DEFAULT_LIFECYCLE,
     DEFAULT_PERMISSIONS,
     DEFAULT_RESOURCES,
-    DEFAULT_LIFECYCLE,
+    IPluginMetadata,
+    IPluginPermissions,
+    IValidationResult,
+    PLUGIN_MANIFEST_FILENAME,
+    PLUGIN_NAME_REGEX,
+    validateManifest as sdkValidateManifest,
 } from '@btc-vision/plugin-sdk';
 
 /** Scoped package name pattern */
@@ -46,9 +46,7 @@ export function validatePluginName(name: string): string[] {
         }
     } else {
         if (!PLUGIN_NAME_REGEX.test(name)) {
-            errors.push(
-                'Name must be lowercase alphanumeric with hyphens, starting with a letter',
-            );
+            errors.push('Name must be lowercase alphanumeric with hyphens, starting with a letter');
         }
     }
 
@@ -80,10 +78,7 @@ export function validatePermissions(permissions: IPluginPermissions): string[] {
     const errors: string[] = [];
 
     if (permissions.database?.enabled) {
-        if (
-            !permissions.database.collections ||
-            !Array.isArray(permissions.database.collections)
-        ) {
+        if (!permissions.database.collections || !Array.isArray(permissions.database.collections)) {
             errors.push('database.collections must be an array when database is enabled');
         }
     }
@@ -114,9 +109,7 @@ export function loadManifest(manifestPath: string): IPluginMetadata {
 
     const result = validateManifest(manifest);
     if (!result.valid) {
-        const errorList = result.errors
-            .map((e) => `  - ${e.path}: ${e.message}`)
-            .join('\n');
+        const errorList = result.errors.map((e) => `  - ${e.path}: ${e.message}`).join('\n');
         throw new Error(`Invalid manifest:\n${errorList}`);
     }
 

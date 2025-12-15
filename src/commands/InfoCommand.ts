@@ -9,9 +9,8 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { IPluginPermissions } from '@btc-vision/plugin-sdk';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, formatFileSize, getParsedMldsaLevel } from '../lib/binary.js';
-import { loadManifest, getManifestPath } from '../lib/manifest.js';
-import { CLIMldsaLevel } from '../types/index.js';
+import { formatFileSize, getParsedMldsaLevel, parseOpnetBinary } from '../lib/binary.js';
+import { getManifestPath, loadManifest } from '../lib/manifest.js';
 
 interface InfoOptions {
     json?: boolean;
@@ -24,9 +23,14 @@ export class InfoCommand extends BaseCommand {
 
     protected configure(): void {
         this.command
-            .argument('[path]', 'Path to plugin directory or .opnet file (default: current directory)')
+            .argument(
+                '[path]',
+                'Path to plugin directory or .opnet file (default: current directory)',
+            )
             .option('--json', 'Output as JSON')
-            .action((inputPath?: string, options?: InfoOptions) => this.execute(inputPath, options));
+            .action((inputPath?: string, options?: InfoOptions) =>
+                this.execute(inputPath, options),
+            );
     }
 
     private execute(inputPath?: string, options?: InfoOptions): void {
@@ -79,61 +83,61 @@ export class InfoCommand extends BaseCommand {
                     signature: parsed.signature.length,
                 },
             };
-            console.log(JSON.stringify(output, null, 2));
+            this.logger.log(JSON.stringify(output, null, 2));
             return;
         }
 
         const meta = parsed.metadata;
 
         this.logger.info('\nOPNet Binary Information\n');
-        console.log('─'.repeat(60));
+        this.logger.log('─'.repeat(60));
 
-        console.log(`File:            ${filePath}`);
-        console.log(`Size:            ${formatFileSize(data.length)}`);
-        console.log(`Format:          v${parsed.formatVersion}`);
-        console.log('');
+        this.logger.log(`File:            ${filePath}`);
+        this.logger.log(`Size:            ${formatFileSize(data.length)}`);
+        this.logger.log(`Format:          v${parsed.formatVersion}`);
+        this.logger.log('');
 
-        console.log('Plugin:');
-        console.log(`  Name:           ${meta.name}`);
-        console.log(`  Version:        ${meta.version}`);
-        console.log(`  Type:           ${meta.pluginType}`);
-        console.log(`  OPNet:          ${meta.opnetVersion}`);
+        this.logger.log('Plugin:');
+        this.logger.log(`  Name:           ${meta.name}`);
+        this.logger.log(`  Version:        ${meta.version}`);
+        this.logger.log(`  Type:           ${meta.pluginType}`);
+        this.logger.log(`  OPNet:          ${meta.opnetVersion}`);
         if (meta.description) {
-            console.log(`  Description:    ${meta.description}`);
+            this.logger.log(`  Description:    ${meta.description}`);
         }
-        console.log('');
+        this.logger.log('');
 
-        console.log('Author:');
-        console.log(`  Name:           ${meta.author.name}`);
+        this.logger.log('Author:');
+        this.logger.log(`  Name:           ${meta.author.name}`);
         if (meta.author.email) {
-            console.log(`  Email:          ${meta.author.email}`);
+            this.logger.log(`  Email:          ${meta.author.email}`);
         }
-        console.log('');
+        this.logger.log('');
 
-        console.log('Cryptography:');
-        console.log(`  MLDSA Level:    MLDSA-${mldsaLevel}`);
-        console.log(`  Signed:         ${isUnsigned ? 'No' : 'Yes'}`);
+        this.logger.log('Cryptography:');
+        this.logger.log(`  MLDSA Level:    MLDSA-${mldsaLevel}`);
+        this.logger.log(`  Signed:         ${isUnsigned ? 'No' : 'Yes'}`);
         if (!isUnsigned) {
-            console.log(`  Publisher:      ${publicKeyHash.substring(0, 32)}...`);
+            this.logger.log(`  Publisher:      ${publicKeyHash.substring(0, 32)}...`);
         }
-        console.log('');
+        this.logger.log('');
 
-        console.log('Sizes:');
-        console.log(`  Bytecode:       ${formatFileSize(parsed.bytecode.length)}`);
-        console.log(`  Metadata:       ${formatFileSize(parsed.rawMetadata.length)}`);
-        console.log(`  Proto:          ${formatFileSize(parsed.proto?.length ?? 0)}`);
-        console.log('');
+        this.logger.log('Sizes:');
+        this.logger.log(`  Bytecode:       ${formatFileSize(parsed.bytecode.length)}`);
+        this.logger.log(`  Metadata:       ${formatFileSize(parsed.rawMetadata.length)}`);
+        this.logger.log(`  Proto:          ${formatFileSize(parsed.proto?.length ?? 0)}`);
+        this.logger.log('');
 
-        console.log('Permissions:');
+        this.logger.log('Permissions:');
         this.displayPermissions(meta.permissions);
-        console.log('');
+        this.logger.log('');
 
         if (Object.keys(meta.dependencies || {}).length > 0) {
-            console.log('Dependencies:');
+            this.logger.log('Dependencies:');
             for (const [name, version] of Object.entries(meta.dependencies || {})) {
-                console.log(`  ${name}: ${version}`);
+                this.logger.log(`  ${name}: ${version}`);
             }
-            console.log('');
+            this.logger.log('');
         }
     }
 
@@ -178,81 +182,91 @@ export class InfoCommand extends BaseCommand {
                 hasSource: hasSrc,
                 hasNodeModules,
             };
-            console.log(JSON.stringify(output, null, 2));
+            this.logger.log(JSON.stringify(output, null, 2));
             return;
         }
 
         this.logger.info('\nOPNet Plugin Project\n');
-        console.log('─'.repeat(60));
+        this.logger.log('─'.repeat(60));
 
-        console.log(`Directory:      ${projectDir}`);
-        console.log('');
+        this.logger.log(`Directory:      ${projectDir}`);
+        this.logger.log('');
 
-        console.log('Plugin:');
-        console.log(`  Name:           ${manifest.name}`);
-        console.log(`  Version:        ${manifest.version}`);
-        console.log(`  Type:           ${manifest.pluginType}`);
-        console.log(`  OPNet:          ${manifest.opnetVersion}`);
+        this.logger.log('Plugin:');
+        this.logger.log(`  Name:           ${manifest.name}`);
+        this.logger.log(`  Version:        ${manifest.version}`);
+        this.logger.log(`  Type:           ${manifest.pluginType}`);
+        this.logger.log(`  OPNet:          ${manifest.opnetVersion}`);
         if (manifest.description) {
-            console.log(`  Description:    ${manifest.description}`);
+            this.logger.log(`  Description:    ${manifest.description}`);
         }
-        console.log('');
+        this.logger.log('');
 
-        console.log('Author:');
-        console.log(`  Name:           ${manifest.author.name}`);
+        this.logger.log('Author:');
+        this.logger.log(`  Name:           ${manifest.author.name}`);
         if (manifest.author.email) {
-            console.log(`  Email:          ${manifest.author.email}`);
+            this.logger.log(`  Email:          ${manifest.author.email}`);
         }
-        console.log('');
+        this.logger.log('');
 
-        console.log('Status:');
-        console.log(`  Source:         ${hasSrc ? 'Found' : 'Missing'}`);
-        console.log(`  Dependencies:   ${hasNodeModules ? 'Installed' : 'Not installed'}`);
-        console.log(
+        this.logger.log('Status:');
+        this.logger.log(`  Source:         ${hasSrc ? 'Found' : 'Missing'}`);
+        this.logger.log(`  Dependencies:   ${hasNodeModules ? 'Installed' : 'Not installed'}`);
+        this.logger.log(
             `  Compiled:       ${hasBinary && binarySize !== null ? `Yes (${formatFileSize(binarySize)})` : 'No'}`,
         );
-        console.log('');
+        this.logger.log('');
 
-        console.log('Permissions:');
+        this.logger.log('Permissions:');
         this.displayPermissions(manifest.permissions);
-        console.log('');
+        this.logger.log('');
 
         if (manifest.resources) {
-            console.log('Resources:');
+            this.logger.log('Resources:');
             if (manifest.resources.memory) {
-                console.log(`  Max Heap:       ${manifest.resources.memory.maxHeapMB ?? 'N/A'} MB`);
+                this.logger.log(
+                    `  Max Heap:       ${manifest.resources.memory.maxHeapMB ?? 'N/A'} MB`,
+                );
             }
             if (manifest.resources.cpu) {
-                console.log(`  Max Threads:    ${manifest.resources.cpu.maxThreads ?? 'N/A'}`);
-                console.log(`  Priority:       ${manifest.resources.cpu.priority ?? 'normal'}`);
+                this.logger.log(`  Max Threads:    ${manifest.resources.cpu.maxThreads ?? 'N/A'}`);
+                this.logger.log(`  Priority:       ${manifest.resources.cpu.priority ?? 'normal'}`);
             }
             if (manifest.resources.timeout) {
-                console.log(`  Init Timeout:   ${manifest.resources.timeout.initMs ?? 'N/A'} ms`);
-                console.log(`  Hook Timeout:   ${manifest.resources.timeout.hookMs ?? 'N/A'} ms`);
+                this.logger.log(
+                    `  Init Timeout:   ${manifest.resources.timeout.initMs ?? 'N/A'} ms`,
+                );
+                this.logger.log(
+                    `  Hook Timeout:   ${manifest.resources.timeout.hookMs ?? 'N/A'} ms`,
+                );
             }
-            console.log('');
+            this.logger.log('');
         }
 
         if (Object.keys(manifest.dependencies || {}).length > 0) {
-            console.log('Plugin Dependencies:');
+            this.logger.log('Plugin Dependencies:');
             for (const [name, version] of Object.entries(manifest.dependencies || {})) {
-                console.log(`  ${name}: ${version}`);
+                this.logger.log(`  ${name}: ${version}`);
             }
-            console.log('');
+            this.logger.log('');
         }
 
         if (manifest.lifecycle) {
-            console.log('Lifecycle:');
-            console.log(`  Load Priority:  ${manifest.lifecycle.loadPriority ?? 100}`);
-            console.log(`  Enabled:        ${manifest.lifecycle.enabledByDefault !== false ? 'Yes' : 'No'}`);
-            console.log(`  Requires Restart: ${manifest.lifecycle.requiresRestart ? 'Yes' : 'No'}`);
-            console.log('');
+            this.logger.log('Lifecycle:');
+            this.logger.log(`  Load Priority:  ${manifest.lifecycle.loadPriority ?? 100}`);
+            this.logger.log(
+                `  Enabled:        ${manifest.lifecycle.enabledByDefault !== false ? 'Yes' : 'No'}`,
+            );
+            this.logger.log(
+                `  Requires Restart: ${manifest.lifecycle.requiresRestart ? 'Yes' : 'No'}`,
+            );
+            this.logger.log('');
         }
     }
 
     private displayPermissions(permissions?: IPluginPermissions): void {
         if (!permissions) {
-            console.log('  (none configured)');
+            this.logger.log('  (none configured)');
             return;
         }
         const db = permissions.database?.enabled ?? false;
@@ -264,14 +278,15 @@ export class InfoCommand extends BaseCommand {
         const epochs = permissions.epochs?.onChange || permissions.epochs?.onFinalized || false;
         const mempool = permissions.mempool?.txFeed ?? false;
         const api = permissions.api?.addEndpoints || permissions.api?.addWebsocket || false;
-        const fsPerms = permissions.filesystem?.configDir || permissions.filesystem?.tempDir || false;
+        const fsPerms =
+            permissions.filesystem?.configDir || permissions.filesystem?.tempDir || false;
 
-        console.log(`  Database:       ${db ? 'Yes' : 'No'}`);
-        console.log(`  Block Hooks:    ${blocks ? 'Yes' : 'No'}`);
-        console.log(`  Epoch Hooks:    ${epochs ? 'Yes' : 'No'}`);
-        console.log(`  Mempool Feed:   ${mempool ? 'Yes' : 'No'}`);
-        console.log(`  API Endpoints:  ${api ? 'Yes' : 'No'}`);
-        console.log(`  Filesystem:     ${fsPerms ? 'Yes' : 'No'}`);
+        this.logger.log(`  Database:       ${db ? 'Yes' : 'No'}`);
+        this.logger.log(`  Block Hooks:    ${blocks ? 'Yes' : 'No'}`);
+        this.logger.log(`  Epoch Hooks:    ${epochs ? 'Yes' : 'No'}`);
+        this.logger.log(`  Mempool Feed:   ${mempool ? 'Yes' : 'No'}`);
+        this.logger.log(`  API Endpoints:  ${api ? 'Yes' : 'No'}`);
+        this.logger.log(`  Filesystem:     ${fsPerms ? 'Yes' : 'No'}`);
     }
 }
 

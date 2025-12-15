@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, formatFileSize } from '../lib/binary.js';
+import { formatFileSize, parseOpnetBinary } from '../lib/binary.js';
 import { CLIMldsaLevel } from '../types/index.js';
 
 interface ListOptions {
@@ -141,7 +141,11 @@ export class ListCommand extends BaseCommand {
                 const sizeWidth = 10;
 
                 this.logger.info(
-                    'Name'.padEnd(nameWidth) + 'Version'.padEnd(versionWidth) + 'Type'.padEnd(typeWidth) + 'Size'.padEnd(sizeWidth) + 'Signed',
+                    'Name'.padEnd(nameWidth) +
+                        'Version'.padEnd(versionWidth) +
+                        'Type'.padEnd(typeWidth) +
+                        'Size'.padEnd(sizeWidth) +
+                        'Signed',
                 );
                 this.logger.info('─'.repeat(nameWidth + versionWidth + typeWidth + sizeWidth + 8));
 

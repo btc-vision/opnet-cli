@@ -142,7 +142,9 @@ export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult>
 
     // Add authorization if configured
     if (config.ipfsPinningAuthHeader) {
-        const [headerName, headerValue] = config.ipfsPinningAuthHeader.split(':').map((s) => s.trim());
+        const [headerName, headerValue] = config.ipfsPinningAuthHeader
+            .split(':')
+            .map((s) => s.trim());
         if (headerName && headerValue) {
             headers[headerName] = headerValue;
         }

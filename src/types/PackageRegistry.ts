@@ -1,5 +1,5 @@
-import { Address, AddressMap } from '@btc-vision/transaction';
-import { CallResult, OPNetEvent, IOP_NETContract } from 'opnet';
+import { Address } from '@btc-vision/transaction';
+import { CallResult, IOP_NETContract, OPNetEvent } from 'opnet';
 
 // ------------------------------------------------------------------
 // Event Definitions

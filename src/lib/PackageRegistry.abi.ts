@@ -4,9 +4,8 @@
  * Auto-generated from PackageRegistry.abi.json
  */
 
-import { BitcoinInterfaceAbi } from 'opnet';
+import { BitcoinAbiTypes, BitcoinInterfaceAbi } from 'opnet';
 import { ABIDataTypes } from '@btc-vision/transaction';
-import { BitcoinAbiTypes } from 'opnet';
 
 export const PACKAGE_REGISTRY_ABI: BitcoinInterfaceAbi = [
     // Functions

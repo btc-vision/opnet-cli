@@ -9,10 +9,10 @@ import * as path from 'path';
 import * as esbuild from 'esbuild';
 import bytenode from 'bytenode';
 import { BaseCommand } from './BaseCommand.js';
-import { loadManifest, getManifestPath } from '../lib/manifest.js';
-import { buildOpnetBinary, formatFileSize, computeChecksum } from '../lib/binary.js';
+import { getManifestPath, loadManifest } from '../lib/manifest.js';
+import { buildOpnetBinary, computeChecksum, formatFileSize } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
-import { loadCredentials, canSign } from '../lib/credentials.js';
+import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIMldsaLevel } from '../types/index.js';
 
 interface CompileOptions {
@@ -131,7 +131,9 @@ export class CompileCommand extends BaseCommand {
                 const checksum = computeChecksum(metadataBytes, bytecode, proto);
 
                 signature = wallet.signMLDSA(checksum);
-                this.logger.success(`Plugin signed (${formatFileSize(signature.length)} signature)`);
+                this.logger.success(
+                    `Plugin signed (${formatFileSize(signature.length)} signature)`,
+                );
             } else {
                 this.logger.warn('Skipping signing (--no-sign)');
                 // Use dummy values for unsigned binary
@@ -168,21 +170,21 @@ export class CompileCommand extends BaseCommand {
             fs.rmSync(bundleDir, { recursive: true, force: true });
 
             // Summary
-            console.log('');
+            this.logger.log('');
             this.logger.success('Compilation successful!');
-            console.log('');
-            console.log(`Output:       ${outputPath}`);
-            console.log(`Size:         ${formatFileSize(binary.length)}`);
-            console.log(`Plugin:       ${manifest.name}@${manifest.version}`);
-            console.log(`Type:         ${manifest.pluginType}`);
-            console.log(`MLDSA Level:  ${mldsaLevel}`);
-            console.log(`Signed:       ${options.sign ? 'Yes' : 'No'}`);
-            console.log('');
+            this.logger.log('');
+            this.logger.log(`Output:       ${outputPath}`);
+            this.logger.log(`Size:         ${formatFileSize(binary.length)}`);
+            this.logger.log(`Plugin:       ${manifest.name}@${manifest.version}`);
+            this.logger.log(`Type:         ${manifest.pluginType}`);
+            this.logger.log(`MLDSA Level:  ${mldsaLevel}`);
+            this.logger.log(`Signed:       ${options.sign ? 'Yes' : 'No'}`);
+            this.logger.log('');
 
             if (!options.sign) {
                 this.logger.warn('Note: This binary is unsigned and cannot be published.');
                 this.logger.warn('Use `opnet sign` to sign it, or compile with signing enabled.');
-                console.log('');
+                this.logger.log('');
             }
         } catch (error) {
             this.logger.fail('Compilation failed');

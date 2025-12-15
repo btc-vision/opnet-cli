@@ -4,12 +4,11 @@
  * @module commands/LoginCommand
  */
 
-import { Command } from 'commander';
-import { input, select, confirm, password } from '@inquirer/prompts';
+import { confirm, password, select } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { saveCredentials, isValidMldsaLevel, isValidNetwork } from '../lib/credentials.js';
-import { validateMnemonic } from '../lib/wallet.js';
-import { CLICredentials, NetworkName, CLIMldsaLevel } from '../types/index.js';
+import { isValidMldsaLevel, isValidNetwork, saveCredentials } from '../lib/credentials.js';
+import { CLIWallet, validateMnemonic } from '../lib/wallet.js';
+import { CLICredentials, CLIMldsaLevel, NetworkName } from '../types/index.js';
 
 interface LoginOptions {
     mnemonic?: string;
@@ -17,7 +16,6 @@ interface LoginOptions {
     mldsa?: string;
     mldsaLevel: string;
     network: string;
-    yes?: boolean;
 }
 
 export class LoginCommand extends BaseCommand {
@@ -27,12 +25,11 @@ export class LoginCommand extends BaseCommand {
 
     protected configure(): void {
         this.command
-            .option('-m, --mnemonic <phrase>', 'BIP-39 mnemonic phrase (24 words)')
+            .option('-m, --mnemonic <phrase>', 'BIP-39 mnemonic phrase (12 or 24 words)')
             .option('--wif <key>', 'Bitcoin WIF private key (advanced)')
             .option('--mldsa <key>', 'MLDSA private key hex (advanced, requires --wif)')
             .option('-l, --mldsa-level <level>', 'MLDSA security level (44, 65, 87)', '44')
             .option('-n, --network <network>', 'Network (mainnet, testnet, regtest)', 'mainnet')
-            .option('-y, --yes', 'Skip confirmation prompts')
             .action((options: LoginOptions) => this.execute(options));
     }
 
@@ -40,28 +37,40 @@ export class LoginCommand extends BaseCommand {
         try {
             const credentials = await this.buildCredentials(options);
 
-            if (!options.yes) {
-                this.logger.warn('Credentials will be stored at ~/.opnet/credentials.json');
-                this.logger.warn('with restricted permissions (owner read/write only).');
+            // Load wallet to display identity info
+            this.logger.info('Deriving wallet...');
+            const wallet = CLIWallet.fromCredentials(credentials);
 
-                const confirmed = await confirm({
-                    message: 'Save credentials?',
-                    default: true,
-                });
+            // Display wallet identity for user verification
+            this.logger.log('');
+            this.logger.info('Wallet Identity');
+            this.logger.log('─'.repeat(50));
+            this.logger.log(`Network:           ${credentials.network}`);
+            this.logger.log(`MLDSA Level:       MLDSA-${credentials.mldsaLevel}`);
+            this.logger.log(`P2TR Address:      ${wallet.p2trAddress}`);
+            this.logger.log(`MLDSA PubKey Hash: ${wallet.mldsaPublicKeyHash.substring(0, 32)}...`);
+            this.logger.log('─'.repeat(50));
+            this.logger.log('');
 
-                if (!confirmed) {
-                    this.logger.warn('Login cancelled.');
-                    return;
-                }
+            // Always require confirmation
+            this.logger.warn('Credentials will be stored at ~/.opnet/credentials.json');
+            this.logger.warn('with restricted permissions (owner read/write only).');
+            this.logger.log('');
+
+            const confirmed = await confirm({
+                message: 'Is this the correct wallet? Save credentials?',
+                default: true,
+            });
+
+            if (!confirmed) {
+                this.logger.warn('Login cancelled.');
+                return;
             }
 
             saveCredentials(credentials);
 
+            this.logger.log('');
             this.logger.success('Credentials saved successfully!');
-            this.logger.info(`Network: ${credentials.network}`);
-            this.logger.info(`MLDSA Level: ${credentials.mldsaLevel}`);
-            this.logger.info(`Auth method: ${credentials.mnemonic ? 'mnemonic' : 'WIF + MLDSA'}`);
-
         } catch (error) {
             if (this.isUserCancelled(error)) {
                 this.logger.warn('Login cancelled.');
@@ -73,7 +82,9 @@ export class LoginCommand extends BaseCommand {
 
     private async buildCredentials(options: LoginOptions): Promise<CLICredentials> {
         if (!isValidNetwork(options.network)) {
-            this.exitWithError(`Invalid network: ${options.network}. Valid: mainnet, testnet, regtest`);
+            this.exitWithError(
+                `Invalid network: ${options.network}. Valid: mainnet, testnet, regtest`,
+            );
             throw new Error('Unreachable'); // Helps TypeScript
         }
 
@@ -114,7 +125,7 @@ export class LoginCommand extends BaseCommand {
                 {
                     name: 'Mnemonic phrase (recommended)',
                     value: 'mnemonic',
-                    description: '24-word BIP-39 phrase for full key derivation',
+                    description: '12 or 24-word BIP-39 phrase for full key derivation',
                 },
                 {
                     name: 'WIF + MLDSA keys (advanced)',
@@ -124,7 +135,7 @@ export class LoginCommand extends BaseCommand {
             ],
         });
 
-        const selectedNetwork = await select({
+        const selectedNetwork = (await select({
             message: 'Select network:',
             choices: [
                 { name: 'Mainnet', value: 'mainnet' },
@@ -132,25 +143,37 @@ export class LoginCommand extends BaseCommand {
                 { name: 'Regtest', value: 'regtest' },
             ],
             default: defaultNetwork,
-        }) as NetworkName;
+        })) as NetworkName;
 
-        const selectedLevel = await select({
+        const selectedLevel = (await select({
             message: 'Select MLDSA security level:',
             choices: [
-                { name: 'MLDSA-44 (Level 2, fastest)', value: 44, description: '1312 byte public key' },
-                { name: 'MLDSA-65 (Level 3, balanced)', value: 65, description: '1952 byte public key' },
-                { name: 'MLDSA-87 (Level 5, most secure)', value: 87, description: '2592 byte public key' },
+                {
+                    name: 'MLDSA-44 (Level 2, fastest)',
+                    value: 44,
+                    description: '1312 byte public key',
+                },
+                {
+                    name: 'MLDSA-65 (Level 3, balanced)',
+                    value: 65,
+                    description: '1952 byte public key',
+                },
+                {
+                    name: 'MLDSA-87 (Level 5, most secure)',
+                    value: 87,
+                    description: '2592 byte public key',
+                },
             ],
             default: defaultLevel,
-        }) as CLIMldsaLevel;
+        })) as CLIMldsaLevel;
 
         if (loginMethod === 'mnemonic') {
             const mnemonic = await password({
-                message: 'Enter your 24-word mnemonic phrase:',
+                message: 'Enter your mnemonic phrase (12 or 24 words):',
                 mask: '*',
                 validate: (value) => {
                     if (!validateMnemonic(value)) {
-                        return 'Invalid mnemonic phrase. Please enter a valid 24-word BIP-39 phrase.';
+                        return 'Invalid mnemonic phrase. Please enter a valid 12 or 24-word BIP-39 phrase.';
                     }
                     return true;
                 },

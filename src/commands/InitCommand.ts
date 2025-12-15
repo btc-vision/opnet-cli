@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { input, select, confirm } from '@inquirer/prompts';
+import { confirm, input, select } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
 import { validatePluginName } from '../lib/manifest.js';
 
@@ -36,14 +36,13 @@ export class InitCommand extends BaseCommand {
             await this.createProject(config, options?.force);
 
             this.logger.success('Plugin initialized successfully!');
-            console.log('');
-            console.log('Next steps:');
-            console.log('  1. npm install');
-            console.log('  2. Edit src/index.ts');
-            console.log('  3. npm run build');
-            console.log('  4. opnet compile');
-            console.log('');
-
+            this.logger.log('');
+            this.logger.log('Next steps:');
+            this.logger.log('  1. npm install');
+            this.logger.log('  2. Edit src/index.ts');
+            this.logger.log('  3. npm run build');
+            this.logger.log('  4. opnet compile');
+            this.logger.log('');
         } catch (error) {
             if (this.isUserCancelled(error)) {
                 this.logger.warn('Initialization cancelled.');
@@ -73,23 +72,33 @@ export class InitCommand extends BaseCommand {
 
         this.logger.info('\nOPNet Plugin Initialization\n');
 
-        const pluginName = name || await input({
-            message: 'Plugin name:',
-            default: path.basename(process.cwd()),
-            validate: (value) => {
-                const errors = validatePluginName(value);
-                return errors.length > 0 ? errors[0] : true;
-            },
-        });
+        const pluginName =
+            name ||
+            (await input({
+                message: 'Plugin name:',
+                default: path.basename(process.cwd()),
+                validate: (value) => {
+                    const errors = validatePluginName(value);
+                    return errors.length > 0 ? errors[0] : true;
+                },
+            }));
 
-        const description = await input({ message: 'Description:', default: '' }) || undefined;
-        const authorName = await input({ message: 'Author name:', default: process.env.USER || 'Author' });
-        const authorEmail = await input({ message: 'Author email (optional):', default: '' }) || undefined;
+        const description = (await input({ message: 'Description:', default: '' })) || undefined;
+        const authorName = await input({
+            message: 'Author name:',
+            default: process.env.USER || 'Author',
+        });
+        const authorEmail =
+            (await input({ message: 'Author email (optional):', default: '' })) || undefined;
 
         const pluginType = await select({
             message: 'Plugin type:',
             choices: [
-                { name: 'Standalone', value: 'standalone' as const, description: 'Independent plugin' },
+                {
+                    name: 'Standalone',
+                    value: 'standalone' as const,
+                    description: 'Independent plugin',
+                },
                 { name: 'Library', value: 'library' as const, description: 'Shared library' },
             ],
             default: options?.template || 'standalone',
@@ -117,7 +126,10 @@ export class InitCommand extends BaseCommand {
         const pluginJsonPath = path.join(projectDir, 'plugin.json');
 
         if (fs.existsSync(pluginJsonPath) && !force) {
-            const overwrite = await confirm({ message: 'plugin.json exists. Overwrite?', default: false });
+            const overwrite = await confirm({
+                message: 'plugin.json exists. Overwrite?',
+                default: false,
+            });
             if (!overwrite) {
                 this.logger.warn('Initialization cancelled.');
                 return;
@@ -156,7 +168,13 @@ export class InitCommand extends BaseCommand {
 
     private createPluginJson(
         projectDir: string,
-        config: { pluginName: string; authorName: string; authorEmail?: string; description?: string; pluginType: 'standalone' | 'library' },
+        config: {
+            pluginName: string;
+            authorName: string;
+            authorEmail?: string;
+            description?: string;
+            pluginType: 'standalone' | 'library';
+        },
     ): void {
         const manifest: Record<string, unknown> = {
             name: config.pluginName,
@@ -240,7 +258,12 @@ export class InitCommand extends BaseCommand {
 
     private createPackageJson(
         projectDir: string,
-        config: { pluginName: string; authorName: string; authorEmail?: string; description?: string },
+        config: {
+            pluginName: string;
+            authorName: string;
+            authorEmail?: string;
+            description?: string;
+        },
         force?: boolean,
     ): void {
         const packageJsonPath = path.join(projectDir, 'package.json');
@@ -258,10 +281,16 @@ export class InitCommand extends BaseCommand {
                 verify: 'opnet verify',
                 lint: 'eslint src/',
             },
-            author: config.authorEmail ? `${config.authorName} <${config.authorEmail}>` : config.authorName,
+            author: config.authorEmail
+                ? `${config.authorName} <${config.authorEmail}>`
+                : config.authorName,
             license: 'Apache-2.0',
             dependencies: { '@btc-vision/plugin-sdk': '^1.0.0' },
-            devDependencies: { '@types/node': '^22.0.0', typescript: '^5.8.0', '@btc-vision/cli': '^1.0.0' },
+            devDependencies: {
+                '@types/node': '^22.0.0',
+                typescript: '^5.8.0',
+                '@btc-vision/cli': '^1.0.0',
+            },
         };
 
         fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
@@ -304,8 +333,9 @@ export class InitCommand extends BaseCommand {
         if (fs.existsSync(indexPath) && !force) return;
 
         const className = this.toPascalCase(config.pluginName);
-        const content = config.pluginType === 'standalone'
-            ? `import { PluginBase, IPluginContext } from '@btc-vision/plugin-sdk';
+        const content =
+            config.pluginType === 'standalone'
+                ? `import { PluginBase, IPluginContext } from '@btc-vision/plugin-sdk';
 
 /**
  * ${className} Plugin
@@ -346,7 +376,7 @@ export default class ${className}Plugin extends PluginBase {
     }
 }
 `
-            : `export * from './lib/index.js';
+                : `export * from './lib/index.js';
 `;
 
         fs.writeFileSync(indexPath, content);
@@ -355,10 +385,13 @@ export default class ${className}Plugin extends PluginBase {
         if (config.pluginType === 'library') {
             const libDir = path.join(projectDir, 'src', 'lib');
             fs.mkdirSync(libDir, { recursive: true });
-            fs.writeFileSync(path.join(libDir, 'index.ts'), `export function hello(): string {
+            fs.writeFileSync(
+                path.join(libDir, 'index.ts'),
+                `export function hello(): string {
     return 'Hello from ${config.pluginName}!';
 }
-`);
+`,
+            );
             this.logger.success('  Created src/lib/index.ts');
         }
     }
@@ -367,7 +400,9 @@ export default class ${className}Plugin extends PluginBase {
         const gitignorePath = path.join(projectDir, '.gitignore');
         if (fs.existsSync(gitignorePath) && !force) return;
 
-        fs.writeFileSync(gitignorePath, `node_modules/
+        fs.writeFileSync(
+            gitignorePath,
+            `node_modules/
 dist/
 build/
 *.jsc
@@ -378,7 +413,8 @@ build/
 .env
 *.log
 coverage/
-`);
+`,
+        );
         this.logger.success('  Created .gitignore');
     }
 
@@ -390,7 +426,9 @@ coverage/
         const readmePath = path.join(projectDir, 'README.md');
         if (fs.existsSync(readmePath) && !force) return;
 
-        fs.writeFileSync(readmePath, `# ${config.pluginName}
+        fs.writeFileSync(
+            readmePath,
+            `# ${config.pluginName}
 
 ${config.description || `An OPNet ${config.pluginType} plugin.`}
 
@@ -411,12 +449,16 @@ npm run verify   # Verify binary
 ## License
 
 Apache-2.0
-`);
+`,
+        );
         this.logger.success('  Created README.md');
     }
 
     private toPascalCase(str: string): string {
-        return str.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+        return str
+            .split(/[-_]/)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join('');
     }
 }
 

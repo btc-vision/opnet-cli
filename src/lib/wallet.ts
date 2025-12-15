@@ -6,14 +6,12 @@
  * @module lib/wallet
  */
 
-import { networks, Network } from '@btc-vision/bitcoin';
+import { Network, networks } from '@btc-vision/bitcoin';
 import { MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/bip32';
-import { Mnemonic, Wallet, EcKeyPair, MessageSigner } from '@btc-vision/transaction';
+import { EcKeyPair, MessageSigner, Mnemonic, Wallet } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
-
-import { MLDSALevel } from '@btc-vision/plugin-sdk';
-import { CLICredentials, NetworkName, CLIMldsaLevel, cliLevelToMLDSALevel, mldsaLevelToCLI } from '../types/index.js';
-import { loadCredentials, canSign } from './credentials.js';
+import { CLICredentials, CLIMldsaLevel, NetworkName } from '../types/index.js';
+import { canSign, loadCredentials } from './credentials.js';
 
 /**
  * Convert CLI network name to bitcoin-js Network object
@@ -55,67 +53,6 @@ export class CLIWallet {
         this.wallet = wallet;
         this.network = network;
         this.mldsaLevel = mldsaLevel;
-    }
-
-    /**
-     * Create a wallet from credentials
-     *
-     * @param credentials - The credentials to use
-     * @returns A CLIWallet instance
-     */
-    static fromCredentials(credentials: CLICredentials): CLIWallet {
-        const network = getNetwork(credentials.network);
-        const securityLevel = getMLDSASecurityLevel(credentials.mldsaLevel);
-
-        if (credentials.mnemonic) {
-            // Primary method: derive from mnemonic
-            const mnemonic = new Mnemonic(
-                credentials.mnemonic,
-                '', // passphrase
-                network,
-                securityLevel,
-            );
-            const wallet = mnemonic.derive(0); // Derive first wallet
-            return new CLIWallet(wallet, network, credentials.mldsaLevel);
-        }
-
-        if (credentials.wif && credentials.mldsaPrivateKey) {
-            // Advanced method: use WIF + standalone MLDSA key
-            const wallet = Wallet.fromWif(
-                credentials.wif,
-                credentials.mldsaPrivateKey,
-                network,
-                securityLevel,
-            );
-            return new CLIWallet(wallet, network, credentials.mldsaLevel);
-        }
-
-        throw new Error(
-            'Invalid credentials: requires either mnemonic or both WIF and MLDSA key',
-        );
-    }
-
-    /**
-     * Load wallet from stored credentials
-     *
-     * @returns CLIWallet instance or throws if no valid credentials
-     */
-    static load(): CLIWallet {
-        const credentials = loadCredentials();
-
-        if (!credentials) {
-            throw new Error(
-                'No credentials found. Run `opnet login` to configure your wallet.',
-            );
-        }
-
-        if (!canSign(credentials)) {
-            throw new Error(
-                'Credentials incomplete for signing. Run `opnet login` to reconfigure.',
-            );
-        }
-
-        return CLIWallet.fromCredentials(credentials);
     }
 
     /**
@@ -176,32 +113,61 @@ export class CLIWallet {
     }
 
     /**
-     * Sign data using MLDSA
+     * Create a wallet from credentials
      *
-     * @param data - The data to sign (typically a SHA-256 hash)
-     * @returns The MLDSA signature
+     * @param credentials - The credentials to use
+     * @returns A CLIWallet instance
      */
-    signMLDSA(data: Buffer): Buffer {
-        const result = MessageSigner.signMLDSAMessage(
-            this.wallet.mldsaKeypair,
-            data,
-        );
-        return Buffer.from(result.signature);
+    static fromCredentials(credentials: CLICredentials): CLIWallet {
+        const network = getNetwork(credentials.network);
+        const securityLevel = getMLDSASecurityLevel(credentials.mldsaLevel);
+
+        if (credentials.mnemonic) {
+            // Primary method: derive from mnemonic using UniSat derivation
+            const mnemonic = new Mnemonic(
+                credentials.mnemonic,
+                '', // passphrase
+                network,
+                securityLevel,
+            );
+            // Use UniSat-compatible derivation with P2TR (Taproot) address type
+            const wallet = mnemonic.deriveUnisat();
+            return new CLIWallet(wallet, network, credentials.mldsaLevel);
+        }
+
+        if (credentials.wif && credentials.mldsaPrivateKey) {
+            // Advanced method: use WIF + standalone MLDSA key
+            const wallet = Wallet.fromWif(
+                credentials.wif,
+                credentials.mldsaPrivateKey,
+                network,
+                securityLevel,
+            );
+            return new CLIWallet(wallet, network, credentials.mldsaLevel);
+        }
+
+        throw new Error('Invalid credentials: requires either mnemonic or both WIF and MLDSA key');
     }
 
     /**
-     * Verify an MLDSA signature using this wallet's keypair
+     * Load wallet from stored credentials
      *
-     * @param data - The original data that was signed
-     * @param signature - The signature to verify
-     * @returns True if the signature is valid
+     * @returns CLIWallet instance or throws if no valid credentials
      */
-    verifyMLDSA(data: Buffer, signature: Buffer): boolean {
-        return MessageSigner.verifyMLDSASignature(
-            this.wallet.mldsaKeypair,
-            data,
-            signature,
-        );
+    static load(): CLIWallet {
+        const credentials = loadCredentials();
+
+        if (!credentials) {
+            throw new Error('No credentials found. Run `opnet login` to configure your wallet.');
+        }
+
+        if (!canSign(credentials)) {
+            throw new Error(
+                'Credentials incomplete for signing. Run `opnet login` to reconfigure.',
+            );
+        }
+
+        return CLIWallet.fromCredentials(credentials);
     }
 
     /**
@@ -231,6 +197,28 @@ export class CLIWallet {
         );
         // Verify signature directly using the keypair
         return keypair.verify(data, signature);
+    }
+
+    /**
+     * Sign data using MLDSA
+     *
+     * @param data - The data to sign (typically a SHA-256 hash)
+     * @returns The MLDSA signature
+     */
+    signMLDSA(data: Buffer): Buffer {
+        const result = MessageSigner.signMLDSAMessage(this.wallet.mldsaKeypair, data);
+        return Buffer.from(result.signature);
+    }
+
+    /**
+     * Verify an MLDSA signature using this wallet's keypair
+     *
+     * @param data - The original data that was signed
+     * @param signature - The signature to verify
+     * @returns True if the signature is valid
+     */
+    verifyMLDSA(data: Buffer, signature: Buffer): boolean {
+        return MessageSigner.verifyMLDSASignature(this.wallet.mldsaKeypair, data, signature);
     }
 }
 

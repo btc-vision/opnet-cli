@@ -9,7 +9,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { CLIConfig, NetworkName, CLIMldsaLevel } from '../types/index.js';
+import { CLIConfig, CLIMldsaLevel, NetworkName } from '../types/index.js';
 
 /** Default configuration directory */
 const CONFIG_DIR = path.join(os.homedir(), '.opnet');

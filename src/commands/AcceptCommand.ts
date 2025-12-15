@@ -6,8 +6,8 @@
 
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { getPendingTransfer, getPendingScopeTransfer } from '../lib/registry.js';
-import { loadCredentials, canSign } from '../lib/credentials.js';
+import { getPendingScopeTransfer, getPendingTransfer } from '../lib/registry.js';
+import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { NetworkName } from '../types/index.js';
 
@@ -56,20 +56,20 @@ export class AcceptCommand extends BaseCommand {
 
                 if (!pending) {
                     this.logger.warn('No pending transfer');
-                    console.log(`No pending transfer for ${name}.`);
+                    this.logger.log(`No pending transfer for ${name}.`);
                     return;
                 }
 
                 this.logger.success('Found pending transfer');
 
                 // Display summary
-                console.log('');
+                this.logger.log('');
                 this.logger.info('Accept Transfer');
-                console.log('─'.repeat(50));
-                console.log(`Type:     Scope`);
-                console.log(`Name:     ${name}`);
-                console.log(`Network:  ${options?.network}`);
-                console.log('');
+                this.logger.log('─'.repeat(50));
+                this.logger.log(`Type:     Scope`);
+                this.logger.log(`Name:     ${name}`);
+                this.logger.log(`Network:  ${options?.network}`);
+                this.logger.log('');
 
                 // Confirmation
                 if (!options?.yes) {
@@ -87,28 +87,28 @@ export class AcceptCommand extends BaseCommand {
                 // Execute acceptance
                 this.logger.info('Accepting transfer...');
                 this.logger.warn('Acceptance transaction required.');
-                console.log('Transaction would call: acceptScopeTransfer(');
-                console.log(`  scopeName: "${scopeName}"`);
-                console.log(')');
+                this.logger.log('Transaction would call: acceptScopeTransfer(');
+                this.logger.log(`  scopeName: "${scopeName}"`);
+                this.logger.log(')');
             } else {
                 const pending = await getPendingTransfer(name, network);
 
                 if (!pending) {
                     this.logger.warn('No pending transfer');
-                    console.log(`No pending transfer for ${name}.`);
+                    this.logger.log(`No pending transfer for ${name}.`);
                     return;
                 }
 
                 this.logger.success('Found pending transfer');
 
                 // Display summary
-                console.log('');
+                this.logger.log('');
                 this.logger.info('Accept Transfer');
-                console.log('─'.repeat(50));
-                console.log(`Type:     Package`);
-                console.log(`Name:     ${name}`);
-                console.log(`Network:  ${options?.network}`);
-                console.log('');
+                this.logger.log('─'.repeat(50));
+                this.logger.log(`Type:     Package`);
+                this.logger.log(`Name:     ${name}`);
+                this.logger.log(`Network:  ${options?.network}`);
+                this.logger.log('');
 
                 // Confirmation
                 if (!options?.yes) {
@@ -126,17 +126,17 @@ export class AcceptCommand extends BaseCommand {
                 // Execute acceptance
                 this.logger.info('Accepting transfer...');
                 this.logger.warn('Acceptance transaction required.');
-                console.log('Transaction would call: acceptTransfer(');
-                console.log(`  packageName: "${name}"`);
-                console.log(')');
+                this.logger.log('Transaction would call: acceptTransfer(');
+                this.logger.log(`  packageName: "${name}"`);
+                this.logger.log(')');
             }
 
             this.logger.info('Acceptance (transaction pending)');
 
-            console.log('');
+            this.logger.log('');
             this.logger.success('Transfer acceptance submitted!');
             this.logger.warn('Note: Registry transaction support is coming soon.');
-            console.log('');
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Acceptance failed');
             if (this.isUserCancelled(error)) {

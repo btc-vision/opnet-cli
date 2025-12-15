@@ -5,7 +5,13 @@
  */
 
 import { BaseCommand } from './BaseCommand.js';
-import { getPackage, getVersion, registryToMldsaLevel, registryToPluginType, VersionInfo } from '../lib/registry.js';
+import {
+    getPackage,
+    getVersion,
+    registryToMldsaLevel,
+    registryToPluginType,
+    VersionInfo,
+} from '../lib/registry.js';
 import { NetworkName } from '../types/index.js';
 
 interface SearchOptions {
@@ -74,8 +80,12 @@ export class SearchCommand extends BaseCommand {
                             details: latestVersionInfo
                                 ? {
                                       ipfsCid: latestVersionInfo.ipfsCid,
-                                      mldsaLevel: registryToMldsaLevel(latestVersionInfo.mldsaLevel),
-                                      pluginType: registryToPluginType(latestVersionInfo.pluginType),
+                                      mldsaLevel: registryToMldsaLevel(
+                                          latestVersionInfo.mldsaLevel,
+                                      ),
+                                      pluginType: registryToPluginType(
+                                          latestVersionInfo.pluginType,
+                                      ),
                                       opnetVersion: latestVersionInfo.opnetVersionRange,
                                       deprecated: latestVersionInfo.deprecated,
                                       publishedAt: Number(latestVersionInfo.publishedAt),
@@ -102,8 +112,12 @@ export class SearchCommand extends BaseCommand {
             if (latestVersionInfo) {
                 this.logger.log('');
                 this.logger.info('Latest Version Details:');
-                this.logger.info(`  Type:          ${registryToPluginType(latestVersionInfo.pluginType)}`);
-                this.logger.info(`  MLDSA Level:   ${registryToMldsaLevel(latestVersionInfo.mldsaLevel)}`);
+                this.logger.info(
+                    `  Type:          ${registryToPluginType(latestVersionInfo.pluginType)}`,
+                );
+                this.logger.info(
+                    `  MLDSA Level:   ${registryToMldsaLevel(latestVersionInfo.mldsaLevel)}`,
+                );
                 this.logger.info(`  OPNet Range:   ${latestVersionInfo.opnetVersionRange}`);
                 this.logger.info(`  IPFS CID:      ${latestVersionInfo.ipfsCid}`);
                 this.logger.info(`  Deprecated:    ${latestVersionInfo.deprecated ? 'Yes' : 'No'}`);

@@ -6,9 +6,9 @@
 
 import { BaseCommand } from './BaseCommand.js';
 import {
-    loadCredentials,
-    hasCredentials,
     getCredentialSource,
+    hasCredentials,
+    loadCredentials,
     maskSensitive,
 } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
@@ -47,63 +47,63 @@ export class WhoamiCommand extends BaseCommand {
             const source = getCredentialSource();
 
             this.logger.info('\nOPNet Identity\n');
-            console.log('─'.repeat(50));
+            this.logger.log('─'.repeat(50));
 
-            console.log(`Network:        ${credentials.network}`);
-            console.log(`MLDSA Level:    ${credentials.mldsaLevel}`);
-            console.log(`Auth Source:    ${source}`);
+            this.logger.log(`Network:        ${credentials.network}`);
+            this.logger.log(`MLDSA Level:    ${credentials.mldsaLevel}`);
+            this.logger.log(`Auth Source:    ${source}`);
 
             try {
                 const wallet = CLIWallet.fromCredentials(credentials);
 
-                console.log('');
-                console.log(`P2TR Address:   ${wallet.p2trAddress}`);
-                console.log(`MLDSA PubKey Hash: ${wallet.mldsaPublicKeyHash}`);
+                this.logger.log('');
+                this.logger.log(`P2TR Address:   ${wallet.p2trAddress}`);
+                this.logger.log(`MLDSA PubKey Hash: ${wallet.mldsaPublicKeyHash}`);
 
                 if (options.publicKey) {
-                    console.log('');
-                    console.log('MLDSA Public Key:');
-                    console.log(wallet.mldsaPublicKey.toString('hex'));
+                    this.logger.log('');
+                    this.logger.log('MLDSA Public Key:');
+                    this.logger.log(wallet.mldsaPublicKey.toString('hex'));
                 }
 
                 if (options.verbose) {
-                    console.log('');
-                    console.log('─'.repeat(50));
-                    console.log('Details:');
-                    console.log(`  Security Level: MLDSA-${credentials.mldsaLevel}`);
-                    console.log(`  Public Key Size: ${wallet.mldsaPublicKey.length} bytes`);
+                    this.logger.log('');
+                    this.logger.log('─'.repeat(50));
+                    this.logger.log('Details:');
+                    this.logger.log(`  Security Level: MLDSA-${credentials.mldsaLevel}`);
+                    this.logger.log(`  Public Key Size: ${wallet.mldsaPublicKey.length} bytes`);
 
                     if (credentials.mnemonic) {
-                        console.log('  Auth Method: BIP-39 Mnemonic');
-                        console.log(`  Mnemonic: ${maskSensitive(credentials.mnemonic, 8)}`);
+                        this.logger.log('  Auth Method: BIP-39 Mnemonic');
+                        this.logger.log(`  Mnemonic: ${maskSensitive(credentials.mnemonic, 8)}`);
                     } else {
-                        console.log('  Auth Method: WIF + MLDSA Keys');
+                        this.logger.log('  Auth Method: WIF + MLDSA Keys');
                         if (credentials.wif) {
-                            console.log(`  WIF: ${maskSensitive(credentials.wif, 4)}`);
+                            this.logger.log(`  WIF: ${maskSensitive(credentials.wif, 4)}`);
                         }
                     }
                 }
-
             } catch (error) {
-                console.log('');
+                this.logger.log('');
                 this.logger.warn('Could not load wallet details.');
                 if (options.verbose) {
                     this.logger.debug(`  Error: ${this.formatError(error)}`);
                 }
 
-                console.log('');
+                this.logger.log('');
                 if (credentials.mnemonic) {
-                    console.log(`Auth Method:    BIP-39 Mnemonic`);
+                    this.logger.log(`Auth Method:    BIP-39 Mnemonic`);
                     if (options.verbose) {
-                        console.log(`Mnemonic:       ${maskSensitive(credentials.mnemonic, 8)}`);
+                        this.logger.log(
+                            `Mnemonic:       ${maskSensitive(credentials.mnemonic, 8)}`,
+                        );
                     }
                 } else {
-                    console.log(`Auth Method:    WIF + MLDSA Keys`);
+                    this.logger.log(`Auth Method:    WIF + MLDSA Keys`);
                 }
             }
 
-            console.log('');
-
+            this.logger.log('');
         } catch (error) {
             this.exitWithError(this.formatError(error));
         }

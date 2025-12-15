@@ -9,18 +9,18 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, formatFileSize, verifyChecksum } from '../lib/binary.js';
+import { formatFileSize, parseOpnetBinary, verifyChecksum } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
-import { loadCredentials, canSign } from '../lib/credentials.js';
+import { canSign, loadCredentials } from '../lib/credentials.js';
 import { uploadPlugin } from '../lib/ipfs.js';
 import {
-    getPackage,
-    getScope,
-    parsePackageName,
     computePermissionsHash,
     encodeDependencies,
-    pluginTypeToRegistry,
+    getPackage,
+    getScope,
     mldsaLevelToRegistry,
+    parsePackageName,
+    pluginTypeToRegistry,
 } from '../lib/registry.js';
 import { CLIMldsaLevel, NetworkName } from '../types/index.js';
 
@@ -108,8 +108,8 @@ export class PublishCommand extends BaseCommand {
             if (walletPkHash !== binaryPkHash) {
                 this.logger.fail('Wallet mismatch');
                 this.logger.error('The binary was signed with a different key.');
-                console.log(`Binary signer: ${binaryPkHash.substring(0, 32)}...`);
-                console.log(`Your key:      ${walletPkHash.substring(0, 32)}...`);
+                this.logger.log(`Binary signer: ${binaryPkHash.substring(0, 32)}...`);
+                this.logger.log(`Your key:      ${walletPkHash.substring(0, 32)}...`);
                 process.exit(1);
             }
             this.logger.success('Wallet verified');
@@ -124,7 +124,9 @@ export class PublishCommand extends BaseCommand {
                 const scopeInfo = await getScope(scope, network);
                 if (!scopeInfo) {
                     this.logger.fail(`Scope @${scope} is not registered`);
-                    this.logger.warn(`Register the scope first with: opnet scope register ${scope}`);
+                    this.logger.warn(
+                        `Register the scope first with: opnet scope register ${scope}`,
+                    );
                     process.exit(1);
                 }
             }
@@ -138,18 +140,18 @@ export class PublishCommand extends BaseCommand {
             );
 
             // Display summary
-            console.log('');
+            this.logger.log('');
             this.logger.info('Publishing Summary');
-            console.log('─'.repeat(50));
-            console.log(`Package:      ${meta.name}`);
-            console.log(`Version:      ${meta.version}`);
-            console.log(`Type:         ${meta.pluginType}`);
-            console.log(`OPNet:        ${meta.opnetVersion}`);
-            console.log(`Size:         ${formatFileSize(data.length)}`);
-            console.log(`MLDSA Level:  ${mldsaLevel}`);
-            console.log(`Network:      ${options?.network}`);
-            console.log(`Status:       ${isNewPackage ? 'New package' : 'New version'}`);
-            console.log('');
+            this.logger.log('─'.repeat(50));
+            this.logger.log(`Package:      ${meta.name}`);
+            this.logger.log(`Version:      ${meta.version}`);
+            this.logger.log(`Type:         ${meta.pluginType}`);
+            this.logger.log(`OPNet:        ${meta.opnetVersion}`);
+            this.logger.log(`Size:         ${formatFileSize(data.length)}`);
+            this.logger.log(`MLDSA Level:  ${mldsaLevel}`);
+            this.logger.log(`Network:      ${options?.network}`);
+            this.logger.log(`Status:       ${isNewPackage ? 'New package' : 'New version'}`);
+            this.logger.log('');
 
             if (options?.dryRun) {
                 this.logger.warn('Dry run - no changes made.');
@@ -182,36 +184,38 @@ export class PublishCommand extends BaseCommand {
             if (isNewPackage) {
                 this.logger.info('Registering package...');
                 this.logger.warn('Package registration required.');
-                console.log(`Transaction would call: registerPackage("${meta.name}")`);
+                this.logger.log(`Transaction would call: registerPackage("${meta.name}")`);
                 this.logger.info('Package registration (transaction pending)');
             }
 
             // Publish version
             this.logger.info('Publishing version...');
             this.logger.warn('Version publishing required.');
-            console.log('Transaction would call: publishVersion(');
-            console.log(`  packageName: "${meta.name}",`);
-            console.log(`  version: "${meta.version}",`);
-            console.log(`  ipfsCid: "${pinResult.cid}",`);
-            console.log(`  checksum: <32 bytes>,`);
-            console.log(`  signature: <${parsed.signature.length} bytes>,`);
-            console.log(`  mldsaLevel: ${mldsaLevelToRegistry(mldsaLevel)},`);
-            console.log(`  opnetVersionRange: "${meta.opnetVersion}",`);
-            console.log(`  pluginType: ${pluginTypeToRegistry(meta.pluginType)},`);
-            console.log(`  permissionsHash: <32 bytes>,`);
-            console.log(`  dependencies: <${dependencies.length} bytes>`);
-            console.log(')');
+            this.logger.log('Transaction would call: publishVersion(');
+            this.logger.log(`  packageName: "${meta.name}",`);
+            this.logger.log(`  version: "${meta.version}",`);
+            this.logger.log(`  ipfsCid: "${pinResult.cid}",`);
+            this.logger.log(`  checksum: <32 bytes>,`);
+            this.logger.log(`  signature: <${parsed.signature.length} bytes>,`);
+            this.logger.log(`  mldsaLevel: ${mldsaLevelToRegistry(mldsaLevel)},`);
+            this.logger.log(`  opnetVersionRange: "${meta.opnetVersion}",`);
+            this.logger.log(`  pluginType: ${pluginTypeToRegistry(meta.pluginType)},`);
+            this.logger.log(`  permissionsHash: <32 bytes>,`);
+            this.logger.log(`  dependencies: <${dependencies.length} bytes>`);
+            this.logger.log(')');
             this.logger.info('Version publishing (transaction pending)');
 
-            console.log('');
+            this.logger.log('');
             this.logger.success('Plugin uploaded successfully!');
-            console.log('');
-            console.log(`IPFS CID:  ${pinResult.cid}`);
-            console.log(`Gateway:   https://ipfs.opnet.org/ipfs/${pinResult.cid}`);
-            console.log('');
+            this.logger.log('');
+            this.logger.log(`IPFS CID:  ${pinResult.cid}`);
+            this.logger.log(`Gateway:   https://ipfs.opnet.org/ipfs/${pinResult.cid}`);
+            this.logger.log('');
             this.logger.warn('Note: Registry transaction support is coming soon.');
-            this.logger.warn('The binary has been uploaded to IPFS and is ready for registry submission.');
-            console.log('');
+            this.logger.warn(
+                'The binary has been uploaded to IPFS and is ready for registry submission.',
+            );
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Publishing failed');
             if (this.isUserCancelled(error)) {

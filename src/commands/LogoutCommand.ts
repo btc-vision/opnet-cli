@@ -6,7 +6,7 @@
 
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { deleteCredentials, hasCredentials, getCredentialSource } from '../lib/credentials.js';
+import { deleteCredentials, getCredentialSource, hasCredentials } from '../lib/credentials.js';
 
 interface LogoutOptions {
     yes?: boolean;
@@ -63,7 +63,6 @@ export class LogoutCommand extends BaseCommand {
             } else {
                 this.logger.warn('No credentials file found to remove.');
             }
-
         } catch (error) {
             if (this.isUserCancelled(error)) {
                 this.logger.warn('Logout cancelled.');

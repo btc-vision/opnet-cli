@@ -7,9 +7,14 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, buildOpnetBinary, computeChecksum, formatFileSize } from '../lib/binary.js';
+import {
+    buildOpnetBinary,
+    computeChecksum,
+    formatFileSize,
+    parseOpnetBinary,
+} from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
-import { loadCredentials, canSign } from '../lib/credentials.js';
+import { canSign, loadCredentials } from '../lib/credentials.js';
 
 interface SignOptions {
     output?: string;
@@ -56,23 +61,30 @@ export class SignCommand extends BaseCommand {
 
             // Check if already signed by a different key
             const isUnsigned = parsed.publicKey.every((b) => b === 0);
-            const currentPkHash = crypto.createHash('sha256').update(parsed.publicKey).digest('hex');
+            const currentPkHash = crypto
+                .createHash('sha256')
+                .update(parsed.publicKey)
+                .digest('hex');
             const newPkHash = wallet.mldsaPublicKeyHash;
 
             if (!isUnsigned && currentPkHash !== newPkHash && !options.force) {
-                console.log('');
+                this.logger.log('');
                 this.logger.warn('Warning: This binary is already signed by a different key.');
-                console.log(`  Current signer: ${currentPkHash.substring(0, 32)}...`);
-                console.log(`  Your key:       ${newPkHash.substring(0, 32)}...`);
-                console.log('');
-                console.log('Use --force to re-sign with your key.');
+                this.logger.log(`  Current signer: ${currentPkHash.substring(0, 32)}...`);
+                this.logger.log(`  Your key:       ${newPkHash.substring(0, 32)}...`);
+                this.logger.log('');
+                this.logger.log('Use --force to re-sign with your key.');
                 process.exit(1);
             }
 
             // Compute new signature
             this.logger.info('Signing...');
             const metadataBytes = Buffer.from(parsed.rawMetadata, 'utf-8');
-            const checksum = computeChecksum(metadataBytes, parsed.bytecode, parsed.proto ?? Buffer.alloc(0));
+            const checksum = computeChecksum(
+                metadataBytes,
+                parsed.bytecode,
+                parsed.proto ?? Buffer.alloc(0),
+            );
             const signature = wallet.signMLDSA(checksum);
             this.logger.success(`Signed (${formatFileSize(signature.length)} signature)`);
 
@@ -92,14 +104,14 @@ export class SignCommand extends BaseCommand {
             const outputPath = options.output || file;
             fs.writeFileSync(outputPath, newBinary);
 
-            console.log('');
+            this.logger.log('');
             this.logger.success('Plugin signed successfully!');
-            console.log('');
-            console.log(`Output:       ${outputPath}`);
-            console.log(`Plugin:       ${parsed.metadata.name}@${parsed.metadata.version}`);
-            console.log(`MLDSA Level:  ${wallet.securityLevel}`);
-            console.log(`Publisher:    ${newPkHash.substring(0, 32)}...`);
-            console.log('');
+            this.logger.log('');
+            this.logger.log(`Output:       ${outputPath}`);
+            this.logger.log(`Plugin:       ${parsed.metadata.name}@${parsed.metadata.version}`);
+            this.logger.log(`MLDSA Level:  ${wallet.securityLevel}`);
+            this.logger.log(`Publisher:    ${newPkHash.substring(0, 32)}...`);
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Signing failed');
             this.exitWithError(this.formatError(error));

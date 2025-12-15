@@ -6,7 +6,7 @@
  * @module types
  */
 
-import { MLDSALevel, MLDSA_PUBLIC_KEY_SIZES, MLDSA_SIGNATURE_SIZES } from '@btc-vision/plugin-sdk';
+import { MLDSA_PUBLIC_KEY_SIZES, MLDSA_SIGNATURE_SIZES, MLDSALevel } from '@btc-vision/plugin-sdk';
 
 /**
  * Network name type

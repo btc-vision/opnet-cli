@@ -9,7 +9,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { CLICredentials, NetworkName, CLIMldsaLevel } from '../types/index.js';
+import { CLICredentials, CLIMldsaLevel, NetworkName } from '../types/index.js';
 import { ensureConfigDir } from './config.js';
 
 /** Credentials file path */
@@ -25,7 +25,8 @@ export function loadCredentials(): CLICredentials | null {
     if (process.env.OPNET_MNEMONIC) {
         return {
             mnemonic: process.env.OPNET_MNEMONIC,
-            mldsaLevel: (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
+            mldsaLevel:
+                (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
             network: (process.env.OPNET_NETWORK as NetworkName) || 'mainnet',
         };
     }
@@ -34,7 +35,8 @@ export function loadCredentials(): CLICredentials | null {
         return {
             wif: process.env.OPNET_PRIVATE_KEY,
             mldsaPrivateKey: process.env.OPNET_MLDSA_KEY,
-            mldsaLevel: (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
+            mldsaLevel:
+                (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
             network: (process.env.OPNET_NETWORK as NetworkName) || 'mainnet',
         };
     }

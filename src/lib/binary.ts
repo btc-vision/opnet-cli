@@ -8,16 +8,16 @@
 
 import * as crypto from 'crypto';
 import {
-    PLUGIN_MAGIC_BYTES,
-    PLUGIN_FORMAT_VERSION,
-    MLDSALevel,
-    MLDSA_PUBLIC_KEY_SIZES,
-    MLDSA_SIGNATURE_SIZES,
     IParsedPluginFile,
     IPluginMetadata,
+    MLDSA_PUBLIC_KEY_SIZES,
+    MLDSA_SIGNATURE_SIZES,
+    MLDSALevel,
+    PLUGIN_FORMAT_VERSION,
+    PLUGIN_MAGIC_BYTES,
 } from '@btc-vision/plugin-sdk';
 
-import { CLIMldsaLevel, cliLevelToMLDSALevel, mldsaLevelToCLI } from '../types/index.js';
+import { cliLevelToMLDSALevel, CLIMldsaLevel, mldsaLevelToCLI } from '../types/index.js';
 
 /**
  * Parse a .opnet binary file
@@ -124,7 +124,8 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     }
 
     // Proto
-    const proto = protoLength > 0 ? Buffer.from(data.subarray(offset, offset + protoLength)) : undefined;
+    const proto =
+        protoLength > 0 ? Buffer.from(data.subarray(offset, offset + protoLength)) : undefined;
     offset += protoLength;
 
     // Checksum (32 bytes)
@@ -171,7 +172,11 @@ export function computeChecksum(metadata: Buffer, bytecode: Buffer, proto: Buffe
  */
 export function verifyChecksum(parsed: IParsedPluginFile): boolean {
     const metadataBytes = Buffer.from(parsed.rawMetadata, 'utf-8');
-    const computed = computeChecksum(metadataBytes, parsed.bytecode, parsed.proto ?? Buffer.alloc(0));
+    const computed = computeChecksum(
+        metadataBytes,
+        parsed.bytecode,
+        parsed.proto ?? Buffer.alloc(0),
+    );
     return computed.equals(parsed.checksum);
 }
 
@@ -189,7 +194,14 @@ export function buildOpnetBinary(options: {
     bytecode: Buffer;
     proto?: Buffer;
 }): Buffer {
-    const { mldsaLevel, publicKey, signature, metadata, bytecode, proto = Buffer.alloc(0) } = options;
+    const {
+        mldsaLevel,
+        publicKey,
+        signature,
+        metadata,
+        bytecode,
+        proto = Buffer.alloc(0),
+    } = options;
 
     const sdkLevel = cliLevelToMLDSALevel(mldsaLevel);
 
@@ -223,9 +235,12 @@ export function buildOpnetBinary(options: {
         1 + // mldsa level
         publicKey.length +
         signature.length +
-        4 + metadataBytes.length + // metadata
-        4 + bytecode.length + // bytecode
-        4 + proto.length + // proto
+        4 +
+        metadataBytes.length + // metadata
+        4 +
+        bytecode.length + // bytecode
+        4 +
+        proto.length + // proto
         32; // checksum
 
     // Build buffer

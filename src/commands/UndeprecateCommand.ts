@@ -7,7 +7,7 @@
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
 import { getPackage, getVersion, isVersionImmutable } from '../lib/registry.js';
-import { loadCredentials, canSign } from '../lib/credentials.js';
+import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { NetworkName } from '../types/index.js';
 
@@ -70,7 +70,7 @@ export class UndeprecateCommand extends BaseCommand {
 
             if (!versionInfo.deprecated) {
                 this.logger.warn('Not deprecated');
-                console.log(`Version ${version} is not deprecated.`);
+                this.logger.log(`Version ${version} is not deprecated.`);
                 return;
             }
 
@@ -86,13 +86,13 @@ export class UndeprecateCommand extends BaseCommand {
             this.logger.success(`Found: ${packageName}@${version} (deprecated)`);
 
             // Display summary
-            console.log('');
+            this.logger.log('');
             this.logger.info('Undeprecation Summary');
-            console.log('─'.repeat(50));
-            console.log(`Package:  ${packageName}`);
-            console.log(`Version:  ${version}`);
-            console.log(`Network:  ${options?.network}`);
-            console.log('');
+            this.logger.log('─'.repeat(50));
+            this.logger.log(`Package:  ${packageName}`);
+            this.logger.log(`Version:  ${version}`);
+            this.logger.log(`Network:  ${options?.network}`);
+            this.logger.log('');
 
             // Confirmation
             if (!options?.yes) {
@@ -110,16 +110,16 @@ export class UndeprecateCommand extends BaseCommand {
             // Execute undeprecation
             this.logger.info('Removing deprecation...');
             this.logger.warn('Undeprecation transaction required.');
-            console.log('Transaction would call: undeprecateVersion(');
-            console.log(`  packageName: "${packageName}",`);
-            console.log(`  version: "${version}"`);
-            console.log(')');
+            this.logger.log('Transaction would call: undeprecateVersion(');
+            this.logger.log(`  packageName: "${packageName}",`);
+            this.logger.log(`  version: "${version}"`);
+            this.logger.log(')');
             this.logger.info('Undeprecation (transaction pending)');
 
-            console.log('');
+            this.logger.log('');
             this.logger.success('Undeprecation submitted!');
             this.logger.warn('Note: Registry transaction support is coming soon.');
-            console.log('');
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Undeprecation failed');
             if (this.isUserCancelled(error)) {

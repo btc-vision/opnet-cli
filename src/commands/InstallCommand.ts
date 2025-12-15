@@ -9,7 +9,7 @@ import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
 import { getPackage, getVersion, registryToMldsaLevel } from '../lib/registry.js';
 import { fetchFromIPFS, isValidCid } from '../lib/ipfs.js';
-import { parseOpnetBinary, verifyChecksum, formatFileSize } from '../lib/binary.js';
+import { formatFileSize, parseOpnetBinary, verifyChecksum } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { NetworkName } from '../types/index.js';
 
@@ -93,11 +93,11 @@ export class InstallCommand extends BaseCommand {
                 this.logger.success(`Found: ${packageName}@${version}`);
 
                 // Display info
-                console.log('');
-                console.log(`IPFS CID:    ${cid}`);
-                console.log(`MLDSA Level: ${registryToMldsaLevel(versionInfo.mldsaLevel)}`);
-                console.log(`Publisher:   ${versionInfo.publisher}`);
-                console.log('');
+                this.logger.log('');
+                this.logger.log(`IPFS CID:    ${cid}`);
+                this.logger.log(`MLDSA Level: ${registryToMldsaLevel(versionInfo.mldsaLevel)}`);
+                this.logger.log(`Publisher:   ${versionInfo.publisher}`);
+                this.logger.log('');
             }
 
             // Download from IPFS
@@ -160,15 +160,15 @@ export class InstallCommand extends BaseCommand {
             this.logger.success('Plugin installed');
 
             // Summary
-            console.log('');
+            this.logger.log('');
             this.logger.success('Plugin installed successfully!');
-            console.log('');
-            console.log(`Package:  ${parsed.metadata.name}`);
-            console.log(`Version:  ${parsed.metadata.version}`);
-            console.log(`Type:     ${parsed.metadata.pluginType}`);
-            console.log(`Size:     ${formatFileSize(result.size)}`);
-            console.log(`Output:   ${outputPath}`);
-            console.log('');
+            this.logger.log('');
+            this.logger.log(`Package:  ${parsed.metadata.name}`);
+            this.logger.log(`Version:  ${parsed.metadata.version}`);
+            this.logger.log(`Type:     ${parsed.metadata.pluginType}`);
+            this.logger.log(`Size:     ${formatFileSize(result.size)}`);
+            this.logger.log(`Output:   ${outputPath}`);
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Installation failed');
             this.exitWithError(this.formatError(error));

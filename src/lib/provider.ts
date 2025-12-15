@@ -9,7 +9,7 @@
 import { JSONRpcProvider } from 'opnet';
 
 import { NetworkName } from '../types/index.js';
-import { getRpcUrl, getRegistryAddress, loadConfig } from './config.js';
+import { getRegistryAddress, getRpcUrl, loadConfig } from './config.js';
 import { getNetwork } from './wallet.js';
 
 /** Provider timeout in milliseconds */

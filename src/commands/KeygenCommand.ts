@@ -7,9 +7,8 @@
 import { Command } from 'commander';
 import * as fs from 'fs';
 import { BaseCommand } from './BaseCommand.js';
-import { generateMLDSAKeypair, generateMnemonic, computePublicKeyHash } from '../lib/wallet.js';
+import { computePublicKeyHash, generateMLDSAKeypair, generateMnemonic } from '../lib/wallet.js';
 import { isValidMldsaLevel } from '../lib/credentials.js';
-import { CLIMldsaLevel } from '../types/index.js';
 
 export class KeygenCommand extends BaseCommand {
     constructor() {
@@ -57,13 +56,12 @@ export class KeygenCommand extends BaseCommand {
                 this.logger.warn('Keep this file secure and backed up!');
             } else {
                 this.logger.info('\nNew BIP-39 Mnemonic Phrase:\n');
-                console.log(mnemonic);
-                console.log('');
+                this.logger.log(mnemonic);
+                this.logger.log('');
                 this.logger.warn('IMPORTANT: Write down these words and store them securely.');
                 this.logger.warn('Anyone with this phrase can access your wallet.');
                 this.logger.warn('Never share this phrase with anyone.');
             }
-
         } catch (error) {
             this.exitWithError(this.formatError(error));
         }
@@ -96,11 +94,10 @@ export class KeygenCommand extends BaseCommand {
                 this.logger.success('Keys generated successfully!');
                 this.logger.info(`  Private key: ${privateKeyPath}`);
                 this.logger.info(`  Public key:  ${publicKeyPath}`);
-                console.log('');
-                console.log(`Public Key Hash: ${publicKeyHash}`);
-                console.log('');
+                this.logger.log('');
+                this.logger.log(`Public Key Hash: ${publicKeyHash}`);
+                this.logger.log('');
                 this.logger.warn('IMPORTANT: Keep the private key secure!');
-
             } else if (options.json) {
                 const output = {
                     level: levelNum,
@@ -110,24 +107,22 @@ export class KeygenCommand extends BaseCommand {
                     privateKeySize: keypair.privateKey.length,
                     publicKeySize: keypair.publicKey.length,
                 };
-                console.log(JSON.stringify(output, null, 2));
-
+                this.logger.log(JSON.stringify(output, null, 2));
             } else {
                 this.logger.info(`\nMLDSA-${levelNum} Keypair:\n`);
-                console.log(`Public Key Hash: ${publicKeyHash}`);
-                console.log(`Public Key Size: ${keypair.publicKey.length} bytes`);
-                console.log(`Private Key Size: ${keypair.privateKey.length} bytes`);
-                console.log('');
-                console.log('Public Key (hex):');
-                console.log(keypair.publicKey.toString('hex'));
-                console.log('');
-                console.log('Private Key (hex):');
-                console.log(keypair.privateKey.toString('hex'));
-                console.log('');
+                this.logger.log(`Public Key Hash: ${publicKeyHash}`);
+                this.logger.log(`Public Key Size: ${keypair.publicKey.length} bytes`);
+                this.logger.log(`Private Key Size: ${keypair.privateKey.length} bytes`);
+                this.logger.log('');
+                this.logger.log('Public Key (hex):');
+                this.logger.log(keypair.publicKey.toString('hex'));
+                this.logger.log('');
+                this.logger.log('Private Key (hex):');
+                this.logger.log(keypair.privateKey.toString('hex'));
+                this.logger.log('');
                 this.logger.warn('IMPORTANT: Store the private key securely!');
                 this.logger.warn('Use --output <prefix> to save to files.');
             }
-
         } catch (error) {
             this.exitWithError(this.formatError(error));
         }
@@ -135,27 +130,27 @@ export class KeygenCommand extends BaseCommand {
 
     private handleInfo(): void {
         this.logger.info('\nMLDSA Key Sizes:\n');
-        console.log('─'.repeat(60));
-        console.log(
+        this.logger.log('─'.repeat(60));
+        this.logger.log(
             `${'Level'.padEnd(12)}${'Public Key'.padEnd(15)}${'Private Key'.padEnd(15)}${'Signature'.padEnd(15)}`,
         );
-        console.log('─'.repeat(60));
-        console.log(
+        this.logger.log('─'.repeat(60));
+        this.logger.log(
             `${'MLDSA-44'.padEnd(12)}${'1,312 bytes'.padEnd(15)}${'2,560 bytes'.padEnd(15)}${'2,420 bytes'.padEnd(15)}`,
         );
-        console.log(
+        this.logger.log(
             `${'MLDSA-65'.padEnd(12)}${'1,952 bytes'.padEnd(15)}${'4,032 bytes'.padEnd(15)}${'3,309 bytes'.padEnd(15)}`,
         );
-        console.log(
+        this.logger.log(
             `${'MLDSA-87'.padEnd(12)}${'2,592 bytes'.padEnd(15)}${'4,896 bytes'.padEnd(15)}${'4,627 bytes'.padEnd(15)}`,
         );
-        console.log('─'.repeat(60));
-        console.log('');
-        console.log('Security levels:');
-        console.log('  MLDSA-44: ~128-bit security (fastest, smallest)');
-        console.log('  MLDSA-65: ~192-bit security (balanced)');
-        console.log('  MLDSA-87: ~256-bit security (highest security)');
-        console.log('');
+        this.logger.log('─'.repeat(60));
+        this.logger.log('');
+        this.logger.log('Security levels:');
+        this.logger.log('  MLDSA-44: ~128-bit security (fastest, smallest)');
+        this.logger.log('  MLDSA-65: ~192-bit security (balanced)');
+        this.logger.log('  MLDSA-87: ~256-bit security (highest security)');
+        this.logger.log('');
     }
 }
 

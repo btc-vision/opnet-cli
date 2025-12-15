@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, verifyChecksum, formatFileSize } from '../lib/binary.js';
+import { formatFileSize, parseOpnetBinary, verifyChecksum } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { CLIMldsaLevel } from '../types/index.js';
 
@@ -33,7 +33,9 @@ export class VerifyCommand extends BaseCommand {
         try {
             if (!fs.existsSync(file)) {
                 if (options.json) {
-                    console.log(JSON.stringify({ valid: false, error: `File not found: ${file}` }));
+                    this.logger.log(
+                        JSON.stringify({ valid: false, error: `File not found: ${file}` }),
+                    );
                     process.exit(1);
                 }
                 this.exitWithError(`File not found: ${file}`);
@@ -48,7 +50,7 @@ export class VerifyCommand extends BaseCommand {
                 parsed = parseOpnetBinary(data);
             } catch (error) {
                 if (options.json) {
-                    console.log(
+                    this.logger.log(
                         JSON.stringify({
                             valid: false,
                             error: `Parse error: ${error instanceof Error ? error.message : String(error)}`,
@@ -103,58 +105,61 @@ export class VerifyCommand extends BaseCommand {
                     signatureError,
                     isUnsigned,
                     metadata: parsed.metadata,
-                    publicKeyHash: crypto.createHash('sha256').update(parsed.publicKey).digest('hex'),
+                    publicKeyHash: crypto
+                        .createHash('sha256')
+                        .update(parsed.publicKey)
+                        .digest('hex'),
                     bytecodeSize: parsed.bytecode.length,
                     protoSize: parsed.proto?.length ?? 0,
                 };
-                console.log(JSON.stringify(output, null, 2));
+                this.logger.log(JSON.stringify(output, null, 2));
                 process.exit(isValid ? 0 : 1);
             }
 
             // Display results
             this.logger.info('\nOPNet Binary Verification\n');
-            console.log('─'.repeat(60));
+            this.logger.log('─'.repeat(60));
 
             // File info
-            console.log(`File:            ${file}`);
-            console.log(`Size:            ${formatFileSize(fileSize)}`);
-            console.log(`Format Version:  ${parsed.formatVersion}`);
-            console.log('');
+            this.logger.log(`File:            ${file}`);
+            this.logger.log(`Size:            ${formatFileSize(fileSize)}`);
+            this.logger.log(`Format Version:  ${parsed.formatVersion}`);
+            this.logger.log('');
 
             // Plugin info
-            console.log('Plugin:');
-            console.log(`  Name:           ${parsed.metadata.name}`);
-            console.log(`  Version:        ${parsed.metadata.version}`);
-            console.log(`  Type:           ${parsed.metadata.pluginType}`);
-            console.log(`  OPNet Version:  ${parsed.metadata.opnetVersion}`);
-            console.log('');
+            this.logger.log('Plugin:');
+            this.logger.log(`  Name:           ${parsed.metadata.name}`);
+            this.logger.log(`  Version:        ${parsed.metadata.version}`);
+            this.logger.log(`  Type:           ${parsed.metadata.pluginType}`);
+            this.logger.log(`  OPNet Version:  ${parsed.metadata.opnetVersion}`);
+            this.logger.log('');
 
             // Cryptographic info
-            console.log('Cryptography:');
-            console.log(`  MLDSA Level:    MLDSA-${mldsaLevel}`);
-            console.log(`  Public Key:     ${formatFileSize(parsed.publicKey.length)}`);
-            console.log(`  Signature:      ${formatFileSize(parsed.signature.length)}`);
+            this.logger.log('Cryptography:');
+            this.logger.log(`  MLDSA Level:    MLDSA-${mldsaLevel}`);
+            this.logger.log(`  Public Key:     ${formatFileSize(parsed.publicKey.length)}`);
+            this.logger.log(`  Signature:      ${formatFileSize(parsed.signature.length)}`);
 
             if (!isUnsigned) {
                 const pkHash = crypto.createHash('sha256').update(parsed.publicKey).digest('hex');
-                console.log(`  PubKey Hash:    ${pkHash.substring(0, 16)}...`);
+                this.logger.log(`  PubKey Hash:    ${pkHash.substring(0, 16)}...`);
             }
-            console.log('');
+            this.logger.log('');
 
             // Verification results
-            console.log('Verification:');
-            console.log(`  Checksum:       ${checksumValid ? 'VALID' : 'INVALID'}`);
+            this.logger.log('Verification:');
+            this.logger.log(`  Checksum:       ${checksumValid ? 'VALID' : 'INVALID'}`);
 
             if (isUnsigned) {
-                console.log(`  Signature:      UNSIGNED`);
+                this.logger.log(`  Signature:      UNSIGNED`);
             } else if (signatureError) {
-                console.log(`  Signature:      ERROR - ${signatureError}`);
+                this.logger.log(`  Signature:      ERROR - ${signatureError}`);
             } else {
-                console.log(`  Signature:      ${signatureValid ? 'VALID' : 'INVALID'}`);
+                this.logger.log(`  Signature:      ${signatureValid ? 'VALID' : 'INVALID'}`);
             }
 
-            console.log('');
-            console.log('─'.repeat(60));
+            this.logger.log('');
+            this.logger.log('─'.repeat(60));
 
             if (isUnsigned) {
                 this.logger.warn('WARNING: This binary is unsigned and cannot be published.');
@@ -170,47 +175,47 @@ export class VerifyCommand extends BaseCommand {
                     this.logger.error('  - Signature invalid (binary may be tampered)');
                 }
             }
-            console.log('');
+            this.logger.log('');
 
             // Verbose output
             if (options.verbose) {
-                console.log('Sizes:');
-                console.log(`  Metadata:       ${formatFileSize(parsed.rawMetadata.length)}`);
-                console.log(`  Bytecode:       ${formatFileSize(parsed.bytecode.length)}`);
-                console.log(`  Proto:          ${formatFileSize(parsed.proto?.length ?? 0)}`);
-                console.log('');
+                this.logger.log('Sizes:');
+                this.logger.log(`  Metadata:       ${formatFileSize(parsed.rawMetadata.length)}`);
+                this.logger.log(`  Bytecode:       ${formatFileSize(parsed.bytecode.length)}`);
+                this.logger.log(`  Proto:          ${formatFileSize(parsed.proto?.length ?? 0)}`);
+                this.logger.log('');
 
-                console.log('Checksums:');
-                console.log(`  Stored:         ${parsed.checksum.toString('hex')}`);
-                console.log('');
+                this.logger.log('Checksums:');
+                this.logger.log(`  Stored:         ${parsed.checksum.toString('hex')}`);
+                this.logger.log('');
 
-                console.log('Author:');
-                console.log(`  Name:           ${parsed.metadata.author.name}`);
+                this.logger.log('Author:');
+                this.logger.log(`  Name:           ${parsed.metadata.author.name}`);
                 if (parsed.metadata.author.email) {
-                    console.log(`  Email:          ${parsed.metadata.author.email}`);
+                    this.logger.log(`  Email:          ${parsed.metadata.author.email}`);
                 }
-                console.log('');
+                this.logger.log('');
 
-                console.log('Permissions:');
+                this.logger.log('Permissions:');
                 const perms = parsed.metadata.permissions;
                 if (perms) {
-                    console.log(`  Database:       ${perms.database?.enabled ? 'Yes' : 'No'}`);
-                    console.log(
+                    this.logger.log(`  Database:       ${perms.database?.enabled ? 'Yes' : 'No'}`);
+                    this.logger.log(
                         `  Block Hooks:    ${perms.blocks?.preProcess || perms.blocks?.postProcess || perms.blocks?.onChange ? 'Yes' : 'No'}`,
                     );
-                    console.log(
+                    this.logger.log(
                         `  Epoch Hooks:    ${perms.epochs?.onChange || perms.epochs?.onFinalized ? 'Yes' : 'No'}`,
                     );
-                    console.log(`  Mempool Feed:   ${perms.mempool?.txFeed ? 'Yes' : 'No'}`);
-                    console.log(`  API Endpoints:  ${perms.api?.addEndpoints ? 'Yes' : 'No'}`);
-                    console.log(`  Websocket:      ${perms.api?.addWebsocket ? 'Yes' : 'No'}`);
-                    console.log(
+                    this.logger.log(`  Mempool Feed:   ${perms.mempool?.txFeed ? 'Yes' : 'No'}`);
+                    this.logger.log(`  API Endpoints:  ${perms.api?.addEndpoints ? 'Yes' : 'No'}`);
+                    this.logger.log(`  Websocket:      ${perms.api?.addWebsocket ? 'Yes' : 'No'}`);
+                    this.logger.log(
                         `  Filesystem:     ${perms.filesystem?.configDir || perms.filesystem?.tempDir ? 'Yes' : 'No'}`,
                     );
                 } else {
-                    console.log('  (none configured)');
+                    this.logger.log('  (none configured)');
                 }
-                console.log('');
+                this.logger.log('');
             }
 
             process.exit(isValid ? 0 : 1);

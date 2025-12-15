@@ -8,13 +8,7 @@ import { Command } from 'commander';
 import * as os from 'os';
 import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
-import {
-    loadConfig,
-    saveConfig,
-    getConfigValue,
-    setConfigValue,
-    displayConfig,
-} from '../lib/config.js';
+import { displayConfig, getConfigValue, saveConfig, setConfigValue } from '../lib/config.js';
 import { CLIConfig } from '../types/index.js';
 
 export class ConfigCommand extends BaseCommand {
@@ -51,11 +45,9 @@ export class ConfigCommand extends BaseCommand {
     }
 
     private createListCommand(): Command {
-        return new Command('list')
-            .description('List all configuration values')
-            .action(() => {
-                this.handleList();
-            });
+        return new Command('list').description('List all configuration values').action(() => {
+            this.handleList();
+        });
     }
 
     private createResetCommand(): Command {
@@ -68,16 +60,14 @@ export class ConfigCommand extends BaseCommand {
     }
 
     private createPathCommand(): Command {
-        return new Command('path')
-            .description('Show configuration file path')
-            .action(() => {
-                this.handlePath();
-            });
+        return new Command('path').description('Show configuration file path').action(() => {
+            this.handlePath();
+        });
     }
 
     private handleGet(key?: string): void {
         if (!key) {
-            console.log(displayConfig());
+            this.logger.log(displayConfig());
             return;
         }
 
@@ -87,9 +77,9 @@ export class ConfigCommand extends BaseCommand {
         }
 
         if (typeof value === 'object') {
-            console.log(JSON.stringify(value, null, 2));
+            this.logger.log(JSON.stringify(value, null, 2));
         } else {
-            console.log(value);
+            this.logger.log(String(value));
         }
     }
 
@@ -106,7 +96,7 @@ export class ConfigCommand extends BaseCommand {
     }
 
     private handleList(): void {
-        console.log(displayConfig());
+        this.logger.log(displayConfig());
     }
 
     private handleReset(confirmed?: boolean): void {
@@ -147,7 +137,7 @@ export class ConfigCommand extends BaseCommand {
     }
 
     private handlePath(): void {
-        console.log(path.join(os.homedir(), '.opnet', 'config.json'));
+        this.logger.log(path.join(os.homedir(), '.opnet', 'config.json'));
     }
 }
 

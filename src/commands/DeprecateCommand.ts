@@ -4,10 +4,10 @@
  * @module commands/DeprecateCommand
  */
 
-import { input, confirm } from '@inquirer/prompts';
+import { confirm, input } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
 import { getPackage, getVersion, isVersionImmutable } from '../lib/registry.js';
-import { loadCredentials, canSign } from '../lib/credentials.js';
+import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { NetworkName } from '../types/index.js';
 
@@ -80,7 +80,7 @@ export class DeprecateCommand extends BaseCommand {
 
             if (versionInfo.deprecated) {
                 this.logger.warn('Already deprecated');
-                console.log(`Version ${targetVersion} is already deprecated.`);
+                this.logger.log(`Version ${targetVersion} is already deprecated.`);
                 return;
             }
 
@@ -106,14 +106,14 @@ export class DeprecateCommand extends BaseCommand {
             message = message || 'No reason provided';
 
             // Display summary
-            console.log('');
+            this.logger.log('');
             this.logger.info('Deprecation Summary');
-            console.log('─'.repeat(50));
-            console.log(`Package:  ${packageName}`);
-            console.log(`Version:  ${targetVersion}`);
-            console.log(`Reason:   ${message}`);
-            console.log(`Network:  ${options?.network}`);
-            console.log('');
+            this.logger.log('─'.repeat(50));
+            this.logger.log(`Package:  ${packageName}`);
+            this.logger.log(`Version:  ${targetVersion}`);
+            this.logger.log(`Reason:   ${message}`);
+            this.logger.log(`Network:  ${options?.network}`);
+            this.logger.log('');
 
             // Confirmation
             if (!options?.yes) {
@@ -131,17 +131,17 @@ export class DeprecateCommand extends BaseCommand {
             // Execute deprecation
             this.logger.info('Deprecating version...');
             this.logger.warn('Deprecation transaction required.');
-            console.log('Transaction would call: deprecateVersion(');
-            console.log(`  packageName: "${packageName}",`);
-            console.log(`  version: "${targetVersion}",`);
-            console.log(`  reason: "${message}"`);
-            console.log(')');
+            this.logger.log('Transaction would call: deprecateVersion(');
+            this.logger.log(`  packageName: "${packageName}",`);
+            this.logger.log(`  version: "${targetVersion}",`);
+            this.logger.log(`  reason: "${message}"`);
+            this.logger.log(')');
             this.logger.info('Deprecation (transaction pending)');
 
-            console.log('');
+            this.logger.log('');
             this.logger.success('Deprecation submitted!');
             this.logger.warn('Note: Registry transaction support is coming soon.');
-            console.log('');
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Deprecation failed');
             if (this.isUserCancelled(error)) {

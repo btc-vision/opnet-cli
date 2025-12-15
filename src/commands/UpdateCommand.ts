@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, formatFileSize, verifyChecksum } from '../lib/binary.js';
+import { parseOpnetBinary, verifyChecksum } from '../lib/binary.js';
 import { getPackage, getVersion } from '../lib/registry.js';
 import { fetchFromIPFS } from '../lib/ipfs.js';
 import { CLIWallet } from '../lib/wallet.js';
@@ -49,7 +49,7 @@ export class UpdateCommand extends BaseCommand {
 
             if (!fs.existsSync(pluginsDir)) {
                 this.logger.warn('No plugins directory found.');
-                console.log(`Expected: ${pluginsDir}`);
+                this.logger.log(`Expected: ${pluginsDir}`);
                 return;
             }
 
@@ -117,19 +117,21 @@ export class UpdateCommand extends BaseCommand {
             }
 
             if (updates.length === 0) {
-                console.log('');
+                this.logger.log('');
                 this.logger.success('All plugins are up to date!');
                 return;
             }
 
             // Display updates
-            console.log('');
+            this.logger.log('');
             this.logger.info('Available Updates:');
-            console.log('─'.repeat(60));
+            this.logger.log('─'.repeat(60));
             for (const update of updates) {
-                console.log(`  ${update.name}: ${update.currentVersion} -> ${update.latestVersion}`);
+                this.logger.log(
+                    `  ${update.name}: ${update.currentVersion} -> ${update.latestVersion}`,
+                );
             }
-            console.log('');
+            this.logger.log('');
 
             // Perform updates
             for (const update of updates) {
@@ -185,9 +187,9 @@ export class UpdateCommand extends BaseCommand {
                 }
             }
 
-            console.log('');
+            this.logger.log('');
             this.logger.success('Update complete!');
-            console.log('');
+            this.logger.log('');
         } catch (error) {
             this.logger.fail('Update failed');
             this.exitWithError(this.formatError(error));

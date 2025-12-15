@@ -10,7 +10,7 @@ import { getContract } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
 
-import { NetworkName, CLIMldsaLevel, RegistryPluginType } from '../types/index.js';
+import { CLIMldsaLevel, NetworkName, RegistryPluginType } from '../types/index.js';
 import { IPluginPermissions } from '@btc-vision/plugin-sdk';
 import { IPackageRegistry } from '../types/PackageRegistry.js';
 import { getProvider, getRegistryContractAddress } from './provider.js';
@@ -114,7 +114,10 @@ export function clearRegistryCache(): void {
  * @param network - Network name
  * @returns Scope information or null if not found
  */
-export async function getScope(scopeName: string, network?: NetworkName): Promise<ScopeInfo | null> {
+export async function getScope(
+    scopeName: string,
+    network?: NetworkName,
+): Promise<ScopeInfo | null> {
     const contract = getRegistryContract(network);
     const result = await contract.getScope(scopeName);
 
