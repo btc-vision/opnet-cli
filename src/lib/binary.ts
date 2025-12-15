@@ -184,28 +184,21 @@ export function verifyChecksum(parsed: IParsedPluginFile): boolean {
  * Build a .opnet binary file
  *
  * @param options - Build options
- * @returns The assembled binary
+ * @returns The assembled binary and the checksum that was signed
  */
 export function buildOpnetBinary(options: {
     mldsaLevel: CLIMldsaLevel;
     publicKey: Buffer;
-    signature: Buffer;
     metadata: IPluginMetadata;
     bytecode: Buffer;
     proto?: Buffer;
-}): Buffer {
-    const {
-        mldsaLevel,
-        publicKey,
-        signature,
-        metadata,
-        bytecode,
-        proto = Buffer.alloc(0),
-    } = options;
+    signFn?: (checksum: Buffer) => Buffer;
+}): { binary: Buffer; checksum: Buffer } {
+    const { mldsaLevel, publicKey, metadata, bytecode, proto = Buffer.alloc(0), signFn } = options;
 
     const sdkLevel = cliLevelToMLDSALevel(mldsaLevel);
 
-    // Validate sizes
+    // Validate public key size
     const expectedPkSize = MLDSA_PUBLIC_KEY_SIZES[sdkLevel];
     const expectedSigSize = MLDSA_SIGNATURE_SIZES[sdkLevel];
 
@@ -215,18 +208,27 @@ export function buildOpnetBinary(options: {
         );
     }
 
+    // First pass: compute checksum without the checksum field set
+    const tempMetadata = { ...metadata, checksum: '' };
+    const tempMetadataBytes = Buffer.from(JSON.stringify(tempMetadata), 'utf-8');
+    const checksum = computeChecksum(tempMetadataBytes, bytecode, proto);
+    const checksumHex = `sha256:${checksum.toString('hex')}`;
+
+    // Second pass: serialize metadata with checksum included
+    const finalMetadata = { ...metadata, checksum: checksumHex };
+    const metadataBytes = Buffer.from(JSON.stringify(finalMetadata), 'utf-8');
+
+    // Recompute checksum with the final metadata (includes checksum field)
+    const finalChecksum = computeChecksum(metadataBytes, bytecode, proto);
+
+    // Sign the final checksum (this is what gets verified)
+    const signature = signFn ? signFn(finalChecksum) : Buffer.alloc(expectedSigSize);
+
     if (signature.length !== expectedSigSize) {
         throw new Error(
             `Signature size mismatch: expected ${expectedSigSize}, got ${signature.length}`,
         );
     }
-
-    // Serialize metadata
-    const metadataStr = JSON.stringify(metadata);
-    const metadataBytes = Buffer.from(metadataStr, 'utf-8');
-
-    // Compute checksum
-    const checksum = computeChecksum(metadataBytes, bytecode, proto);
 
     // Calculate total size
     const totalSize =
@@ -291,10 +293,10 @@ export function buildOpnetBinary(options: {
     proto.copy(buffer, offset);
     offset += proto.length;
 
-    // Checksum
-    checksum.copy(buffer, offset);
+    // Checksum (use finalChecksum which was computed with metadata containing checksum hex)
+    finalChecksum.copy(buffer, offset);
 
-    return buffer;
+    return { binary: buffer, checksum: finalChecksum };
 }
 
 /**

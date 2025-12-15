@@ -10,7 +10,7 @@ import * as esbuild from 'esbuild';
 import bytenode from 'bytenode';
 import { BaseCommand } from './BaseCommand.js';
 import { getManifestPath, loadManifest } from '../lib/manifest.js';
-import { buildOpnetBinary, computeChecksum, formatFileSize } from '../lib/binary.js';
+import { buildOpnetBinary, formatFileSize } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIMldsaLevel } from '../types/index.js';
@@ -105,8 +105,8 @@ export class CompileCommand extends BaseCommand {
 
             // Prepare signing
             let publicKey: Buffer;
-            let signature: Buffer;
             let mldsaLevel: CLIMldsaLevel;
+            let signFn: ((checksum: Buffer) => Buffer) | undefined;
 
             if (options.sign) {
                 this.logger.info('Loading wallet for signing...');
@@ -125,33 +125,31 @@ export class CompileCommand extends BaseCommand {
 
                 this.logger.success(`Wallet loaded (MLDSA-${mldsaLevel})`);
 
-                // Compute checksum and sign
-                this.logger.info('Signing plugin...');
-                const metadataBytes = Buffer.from(JSON.stringify(manifest), 'utf-8');
-                const checksum = computeChecksum(metadataBytes, bytecode, proto);
-
-                signature = wallet.signMLDSA(checksum);
-                this.logger.success(
-                    `Plugin signed (${formatFileSize(signature.length)} signature)`,
-                );
+                // Create signing function that will be called with the final checksum
+                signFn = (checksum: Buffer) => wallet.signMLDSA(checksum);
             } else {
                 this.logger.warn('Skipping signing (--no-sign)');
                 // Use dummy values for unsigned binary
                 mldsaLevel = 44;
                 publicKey = Buffer.alloc(1312); // MLDSA-44 public key size
-                signature = Buffer.alloc(2420); // MLDSA-44 signature size
             }
 
             // Build .opnet binary
             this.logger.info('Assembling .opnet binary...');
-            const binary = buildOpnetBinary({
+            const { binary, checksum } = buildOpnetBinary({
                 mldsaLevel,
                 publicKey,
-                signature,
                 metadata: manifest,
                 bytecode,
                 proto,
+                signFn,
             });
+
+            if (options.sign) {
+                this.logger.success(
+                    `Plugin signed (checksum: sha256:${checksum.toString('hex').substring(0, 16)}...)`,
+                );
+            }
             this.logger.success(`Binary assembled (${formatFileSize(binary.length)})`);
 
             // Write output
@@ -178,6 +176,7 @@ export class CompileCommand extends BaseCommand {
             this.logger.log(`Plugin:       ${manifest.name}@${manifest.version}`);
             this.logger.log(`Type:         ${manifest.pluginType}`);
             this.logger.log(`MLDSA Level:  ${mldsaLevel}`);
+            this.logger.log(`Checksum:     sha256:${checksum.toString('hex')}`);
             this.logger.log(`Signed:       ${options.sign ? 'Yes' : 'No'}`);
             this.logger.log('');
 

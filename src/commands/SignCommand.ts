@@ -7,12 +7,7 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { BaseCommand } from './BaseCommand.js';
-import {
-    buildOpnetBinary,
-    computeChecksum,
-    formatFileSize,
-    parseOpnetBinary,
-} from '../lib/binary.js';
+import { buildOpnetBinary, formatFileSize, parseOpnetBinary } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 
@@ -77,27 +72,20 @@ export class SignCommand extends BaseCommand {
                 process.exit(1);
             }
 
-            // Compute new signature
-            this.logger.info('Signing...');
-            const metadataBytes = Buffer.from(parsed.rawMetadata, 'utf-8');
-            const checksum = computeChecksum(
-                metadataBytes,
-                parsed.bytecode,
-                parsed.proto ?? Buffer.alloc(0),
-            );
-            const signature = wallet.signMLDSA(checksum);
-            this.logger.success(`Signed (${formatFileSize(signature.length)} signature)`);
-
-            // Rebuild binary
-            this.logger.info('Rebuilding binary...');
-            const newBinary = buildOpnetBinary({
+            // Rebuild binary with signing
+            this.logger.info('Signing and rebuilding binary...');
+            const signFn = (checksum: Buffer) => wallet.signMLDSA(checksum);
+            const { binary: newBinary, checksum } = buildOpnetBinary({
                 mldsaLevel: wallet.securityLevel,
                 publicKey: wallet.mldsaPublicKey,
-                signature,
                 metadata: parsed.metadata,
                 bytecode: parsed.bytecode,
                 proto: parsed.proto ?? Buffer.alloc(0),
+                signFn,
             });
+            this.logger.success(
+                `Signed (checksum: sha256:${checksum.toString('hex').substring(0, 16)}...)`,
+            );
             this.logger.success(`Binary rebuilt (${formatFileSize(newBinary.length)})`);
 
             // Write output

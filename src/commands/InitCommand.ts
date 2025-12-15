@@ -185,7 +185,7 @@ export class InitCommand extends BaseCommand {
         const manifest: Record<string, unknown> = {
             name: config.pluginName,
             version: '1.0.0',
-            opnetVersion: '^1.0.0',
+            opnetVersion: '>=0.0.1',
             main: 'dist/index.jsc',
             target: 'bytenode',
             type: 'plugin',

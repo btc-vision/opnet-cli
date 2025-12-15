@@ -167,7 +167,7 @@ export function createManifest(options: {
     return {
         name: options.name,
         version: '1.0.0',
-        opnetVersion: '^1.0.0',
+        opnetVersion: '>=0.0.1',
         main: 'dist/index.jsc',
         target: 'bytenode',
         type: 'plugin',
