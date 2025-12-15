@@ -115,7 +115,7 @@ export function loadManifest(manifestPath: string): IPluginMetadata {
     const result = validateManifest(manifest);
     if (!result.valid) {
         const errorList = result.errors
-            .map((e) => `  - ${e.field}: ${e.message}`)
+            .map((e) => `  - ${e.path}: ${e.message}`)
             .join('\n');
         throw new Error(`Invalid manifest:\n${errorList}`);
     }
