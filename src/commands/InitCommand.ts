@@ -1,0 +1,347 @@
+/**
+ * Init command - Initialize a new OPNet plugin project
+ *
+ * @module commands/InitCommand
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { input, select, confirm } from '@inquirer/prompts';
+import { BaseCommand } from './BaseCommand.js';
+import { validatePluginName } from '../lib/manifest.js';
+
+interface InitOptions {
+    template: string;
+    yes?: boolean;
+    force?: boolean;
+}
+
+export class InitCommand extends BaseCommand {
+    constructor() {
+        super('init', 'Initialize a new OPNet plugin project');
+    }
+
+    protected configure(): void {
+        this.command
+            .argument('[name]', 'Plugin name')
+            .option('-t, --template <type>', 'Template type (standalone, library)', 'standalone')
+            .option('-y, --yes', 'Skip prompts and use defaults')
+            .option('--force', 'Overwrite existing files')
+            .action((name?: string, options?: InitOptions) => this.execute(name, options));
+    }
+
+    private async execute(name?: string, options?: InitOptions): Promise<void> {
+        try {
+            const config = await this.gatherConfig(name, options);
+            await this.createProject(config, options?.force);
+
+            this.logger.success('Plugin initialized successfully!');
+            console.log('');
+            console.log('Next steps:');
+            console.log('  1. npm install');
+            console.log('  2. Edit src/index.ts');
+            console.log('  3. npm run build');
+            console.log('  4. opnet compile');
+            console.log('');
+
+        } catch (error) {
+            if (this.isUserCancelled(error)) {
+                this.logger.warn('Initialization cancelled.');
+                process.exit(0);
+            }
+            this.exitWithError(this.formatError(error));
+        }
+    }
+
+    private async gatherConfig(
+        name?: string,
+        options?: InitOptions,
+    ): Promise<{
+        pluginName: string;
+        authorName: string;
+        authorEmail?: string;
+        description?: string;
+        pluginType: 'standalone' | 'library';
+    }> {
+        if (options?.yes && name) {
+            return {
+                pluginName: name,
+                authorName: 'Author',
+                pluginType: (options.template as 'standalone' | 'library') || 'standalone',
+            };
+        }
+
+        this.logger.info('\nOPNet Plugin Initialization\n');
+
+        const pluginName = name || await input({
+            message: 'Plugin name:',
+            default: path.basename(process.cwd()),
+            validate: (value) => {
+                const errors = validatePluginName(value);
+                return errors.length > 0 ? errors[0] : true;
+            },
+        });
+
+        const description = await input({ message: 'Description:', default: '' }) || undefined;
+        const authorName = await input({ message: 'Author name:', default: process.env.USER || 'Author' });
+        const authorEmail = await input({ message: 'Author email (optional):', default: '' }) || undefined;
+
+        const pluginType = await select({
+            message: 'Plugin type:',
+            choices: [
+                { name: 'Standalone', value: 'standalone' as const, description: 'Independent plugin' },
+                { name: 'Library', value: 'library' as const, description: 'Shared library' },
+            ],
+            default: options?.template || 'standalone',
+        });
+
+        return { pluginName, authorName, authorEmail, description, pluginType };
+    }
+
+    private async createProject(
+        config: {
+            pluginName: string;
+            authorName: string;
+            authorEmail?: string;
+            description?: string;
+            pluginType: 'standalone' | 'library';
+        },
+        force?: boolean,
+    ): Promise<void> {
+        const nameErrors = validatePluginName(config.pluginName);
+        if (nameErrors.length > 0) {
+            this.exitWithError(`Invalid plugin name: ${nameErrors.join(', ')}`);
+        }
+
+        const projectDir = process.cwd();
+        const pluginJsonPath = path.join(projectDir, 'plugin.json');
+
+        if (fs.existsSync(pluginJsonPath) && !force) {
+            const overwrite = await confirm({ message: 'plugin.json exists. Overwrite?', default: false });
+            if (!overwrite) {
+                this.logger.warn('Initialization cancelled.');
+                return;
+            }
+        }
+
+        this.logger.info('Creating project structure...');
+
+        // Create directories
+        for (const dir of ['src', 'dist', 'build', 'test']) {
+            const dirPath = path.join(projectDir, dir);
+            if (!fs.existsSync(dirPath)) {
+                fs.mkdirSync(dirPath, { recursive: true });
+            }
+        }
+
+        // Create plugin.json
+        this.createPluginJson(projectDir, config);
+        this.logger.success('  Created plugin.json');
+
+        // Create package.json
+        this.createPackageJson(projectDir, config, force);
+
+        // Create tsconfig.json
+        this.createTsConfig(projectDir, force);
+
+        // Create src/index.ts
+        this.createEntryPoint(projectDir, config, force);
+
+        // Create .gitignore
+        this.createGitignore(projectDir, force);
+
+        // Create README.md
+        this.createReadme(projectDir, config, force);
+    }
+
+    private createPluginJson(
+        projectDir: string,
+        config: { pluginName: string; authorName: string; authorEmail?: string; description?: string; pluginType: 'standalone' | 'library' },
+    ): void {
+        const manifest = {
+            name: config.pluginName,
+            version: '1.0.0',
+            opnetVersion: '^1.0.0',
+            main: 'dist/index.jsc',
+            target: 'bytenode',
+            type: 'plugin',
+            author: { name: config.authorName, email: config.authorEmail },
+            description: config.description,
+            pluginType: config.pluginType,
+            permissions: {
+                database: { enabled: false, collections: [] },
+                blocks: { preProcess: false, postProcess: false, onChange: false },
+                epochs: { onChange: false, onFinalized: false },
+                mempool: { txFeed: false },
+                api: { addEndpoints: false, addWebsocket: false },
+                filesystem: { configDir: false, tempDir: false },
+            },
+            resources: { maxMemoryMB: 256, maxCpuPercent: 25, maxStorageMB: 100 },
+            dependencies: {},
+            lifecycle: { autoStart: true, restartOnCrash: true, maxRestarts: 3 },
+        };
+
+        fs.writeFileSync(path.join(projectDir, 'plugin.json'), JSON.stringify(manifest, null, 4));
+    }
+
+    private createPackageJson(
+        projectDir: string,
+        config: { pluginName: string; authorName: string; authorEmail?: string; description?: string },
+        force?: boolean,
+    ): void {
+        const packageJsonPath = path.join(projectDir, 'package.json');
+        if (fs.existsSync(packageJsonPath) && !force) return;
+
+        const packageJson = {
+            name: config.pluginName,
+            version: '1.0.0',
+            description: config.description || 'OPNet plugin',
+            type: 'module',
+            main: 'dist/index.js',
+            scripts: {
+                build: 'tsc',
+                compile: 'opnet compile',
+                verify: 'opnet verify',
+                lint: 'eslint src/',
+            },
+            author: config.authorEmail ? `${config.authorName} <${config.authorEmail}>` : config.authorName,
+            license: 'Apache-2.0',
+            dependencies: { '@btc-vision/plugin-sdk': '^1.0.0' },
+            devDependencies: { '@types/node': '^22.0.0', typescript: '^5.8.0', '@btc-vision/cli': '^1.0.0' },
+        };
+
+        fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
+        this.logger.success('  Created package.json');
+    }
+
+    private createTsConfig(projectDir: string, force?: boolean): void {
+        const tsconfigPath = path.join(projectDir, 'tsconfig.json');
+        if (fs.existsSync(tsconfigPath) && !force) return;
+
+        const tsconfig = {
+            compilerOptions: {
+                target: 'ES2022',
+                module: 'NodeNext',
+                moduleResolution: 'NodeNext',
+                lib: ['ES2022'],
+                outDir: './dist',
+                rootDir: './src',
+                strict: true,
+                esModuleInterop: true,
+                skipLibCheck: true,
+                forceConsistentCasingInFileNames: true,
+                declaration: true,
+                sourceMap: true,
+            },
+            include: ['src/**/*'],
+            exclude: ['node_modules', 'dist', 'build'],
+        };
+
+        fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 4));
+        this.logger.success('  Created tsconfig.json');
+    }
+
+    private createEntryPoint(
+        projectDir: string,
+        config: { pluginName: string; pluginType: 'standalone' | 'library' },
+        force?: boolean,
+    ): void {
+        const indexPath = path.join(projectDir, 'src', 'index.ts');
+        if (fs.existsSync(indexPath) && !force) return;
+
+        const className = this.toPascalCase(config.pluginName);
+        const content = config.pluginType === 'standalone'
+            ? `import { PluginBase, PluginContext } from '@btc-vision/plugin-sdk';
+
+export default class ${className}Plugin extends PluginBase {
+    public readonly name = '${config.pluginName}';
+    public readonly version = '1.0.0';
+
+    public async onInitialize(context: PluginContext): Promise<void> {
+        this.logger.info('Plugin initialized');
+    }
+
+    public async onStart(): Promise<void> {
+        this.logger.info('Plugin started');
+    }
+
+    public async onStop(): Promise<void> {
+        this.logger.info('Plugin stopped');
+    }
+}
+`
+            : `export * from './lib/index.js';
+`;
+
+        fs.writeFileSync(indexPath, content);
+        this.logger.success('  Created src/index.ts');
+
+        if (config.pluginType === 'library') {
+            const libDir = path.join(projectDir, 'src', 'lib');
+            fs.mkdirSync(libDir, { recursive: true });
+            fs.writeFileSync(path.join(libDir, 'index.ts'), `export function hello(): string {
+    return 'Hello from ${config.pluginName}!';
+}
+`);
+            this.logger.success('  Created src/lib/index.ts');
+        }
+    }
+
+    private createGitignore(projectDir: string, force?: boolean): void {
+        const gitignorePath = path.join(projectDir, '.gitignore');
+        if (fs.existsSync(gitignorePath) && !force) return;
+
+        fs.writeFileSync(gitignorePath, `node_modules/
+dist/
+build/
+*.jsc
+*.opnet
+.idea/
+.vscode/
+.DS_Store
+.env
+*.log
+coverage/
+`);
+        this.logger.success('  Created .gitignore');
+    }
+
+    private createReadme(
+        projectDir: string,
+        config: { pluginName: string; description?: string; pluginType: string },
+        force?: boolean,
+    ): void {
+        const readmePath = path.join(projectDir, 'README.md');
+        if (fs.existsSync(readmePath) && !force) return;
+
+        fs.writeFileSync(readmePath, `# ${config.pluginName}
+
+${config.description || `An OPNet ${config.pluginType} plugin.`}
+
+## Installation
+
+\`\`\`bash
+npm install
+\`\`\`
+
+## Development
+
+\`\`\`bash
+npm run build    # Build TypeScript
+npm run compile  # Compile to .opnet
+npm run verify   # Verify binary
+\`\`\`
+
+## License
+
+Apache-2.0
+`);
+        this.logger.success('  Created README.md');
+    }
+
+    private toPascalCase(str: string): string {
+        return str.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+    }
+}
+
+export const initCommand = new InitCommand().getCommand();

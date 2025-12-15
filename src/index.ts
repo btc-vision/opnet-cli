@@ -6,29 +6,30 @@
  */
 
 import { Command } from 'commander';
-import chalk from 'chalk';
+import { Logger } from '@btc-vision/logger';
 
 // Commands
-import { configCommand } from './commands/config.js';
-import { loginCommand } from './commands/login.js';
-import { logoutCommand } from './commands/logout.js';
-import { whoamiCommand } from './commands/whoami.js';
-import { keygenCommand } from './commands/keygen.js';
-import { initCommand } from './commands/init.js';
-import { compileCommand } from './commands/compile.js';
-import { verifyCommand } from './commands/verify.js';
-import { infoCommand } from './commands/info.js';
-import { signCommand } from './commands/sign.js';
-import { publishCommand } from './commands/publish.js';
-import { deprecateCommand } from './commands/deprecate.js';
-import { undeprecateCommand } from './commands/undeprecate.js';
-import { transferCommand } from './commands/transfer.js';
-import { acceptCommand } from './commands/accept.js';
-import { installCommand } from './commands/install.js';
-import { updateCommand } from './commands/update.js';
-import { listCommand } from './commands/list.js';
-import { searchCommand } from './commands/search.js';
+import { configCommand } from './commands/ConfigCommand.js';
+import { loginCommand } from './commands/LoginCommand.js';
+import { logoutCommand } from './commands/LogoutCommand.js';
+import { whoamiCommand } from './commands/WhoamiCommand.js';
+import { keygenCommand } from './commands/KeygenCommand.js';
+import { initCommand } from './commands/InitCommand.js';
+import { compileCommand } from './commands/CompileCommand.js';
+import { verifyCommand } from './commands/VerifyCommand.js';
+import { infoCommand } from './commands/InfoCommand.js';
+import { signCommand } from './commands/SignCommand.js';
+import { publishCommand } from './commands/PublishCommand.js';
+import { deprecateCommand } from './commands/DeprecateCommand.js';
+import { undeprecateCommand } from './commands/UndeprecateCommand.js';
+import { transferCommand } from './commands/TransferCommand.js';
+import { acceptCommand } from './commands/AcceptCommand.js';
+import { installCommand } from './commands/InstallCommand.js';
+import { updateCommand } from './commands/UpdateCommand.js';
+import { listCommand } from './commands/ListCommand.js';
+import { searchCommand } from './commands/SearchCommand.js';
 
+const logger = new Logger();
 const program = new Command();
 
 program
@@ -73,12 +74,12 @@ program.exitOverride((err) => {
     if (err.code === 'commander.version') {
         process.exit(0);
     }
-    console.error(chalk.red(`Error: ${err.message}`));
+    logger.error(`Error: ${err.message}`);
     process.exit(1);
 });
 
 // Parse command line arguments
 program.parseAsync(process.argv).catch((error: Error) => {
-    console.error(chalk.red(`Error: ${error.message}`));
+    logger.error(`Error: ${error.message}`);
     process.exit(1);
 });
