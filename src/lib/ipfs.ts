@@ -243,7 +243,6 @@ export async function fetchFromIPFS(cid: string): Promise<FetchResult> {
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
             // Try next gateway
-            continue;
         }
     }
 

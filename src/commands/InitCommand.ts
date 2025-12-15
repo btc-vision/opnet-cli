@@ -164,6 +164,12 @@ export class InitCommand extends BaseCommand {
 
         // Create README.md
         this.createReadme(projectDir, config, force);
+
+        // Create ESLint config
+        this.createEslintConfig(projectDir, force);
+
+        // Create Prettier config
+        this.createPrettierConfig(projectDir, force);
     }
 
     private createPluginJson(
@@ -183,7 +189,6 @@ export class InitCommand extends BaseCommand {
             main: 'dist/index.jsc',
             target: 'bytenode',
             type: 'plugin',
-            checksum: '',
             author: config.authorEmail
                 ? { name: config.authorName, email: config.authorEmail }
                 : { name: config.authorName },
@@ -277,9 +282,10 @@ export class InitCommand extends BaseCommand {
             main: 'dist/index.js',
             scripts: {
                 build: 'tsc',
-                compile: 'opnet compile',
-                verify: 'opnet verify',
+                compile: 'npx opnet compile',
+                verify: 'npx opnet verify',
                 lint: 'eslint src/',
+                format: 'prettier --write src/',
             },
             author: config.authorEmail
                 ? `${config.authorName} <${config.authorEmail}>`
@@ -287,8 +293,12 @@ export class InitCommand extends BaseCommand {
             license: 'Apache-2.0',
             dependencies: { '@btc-vision/plugin-sdk': '^1.0.0' },
             devDependencies: {
-                '@types/node': '^22.0.0',
+                '@eslint/js': '^9.39.0',
+                '@types/node': '^25.0.0',
+                eslint: '^9.39.0',
+                prettier: '^3.6.0',
                 typescript: '^5.8.0',
+                'typescript-eslint': '^8.39.0',
                 '@btc-vision/cli': '^1.0.0',
             },
         };
@@ -452,6 +462,78 @@ Apache-2.0
 `,
         );
         this.logger.success('  Created README.md');
+    }
+
+    private createEslintConfig(projectDir: string, force?: boolean): void {
+        const eslintPath = path.join(projectDir, 'eslint.config.js');
+        if (fs.existsSync(eslintPath) && !force) return;
+
+        const content = `// @ts-check
+
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+    eslint.configs.recommended,
+    ...tseslint.configs.strictTypeChecked,
+    {
+        languageOptions: {
+            parserOptions: {
+                projectService: true,
+                tsconfigDirName: import.meta.dirname,
+            },
+        },
+        rules: {
+            'no-undef': 'off',
+            '@typescript-eslint/no-unused-vars': 'off',
+            'no-empty': 'off',
+            '@typescript-eslint/restrict-template-expressions': 'off',
+            '@typescript-eslint/only-throw-error': 'off',
+            '@typescript-eslint/no-unnecessary-condition': 'off',
+            '@typescript-eslint/unbound-method': 'warn',
+            '@typescript-eslint/no-confusing-void-expression': 'off',
+            '@typescript-eslint/no-extraneous-class': 'off',
+            'no-async-promise-executor': 'off',
+            '@typescript-eslint/no-misused-promises': 'off',
+            '@typescript-eslint/no-unnecessary-type-parameters': 'off',
+            '@typescript-eslint/no-duplicate-enum-values': 'off',
+            'prefer-spread': 'off',
+            '@typescript-eslint/no-empty-object-type': 'off',
+            '@typescript-eslint/no-base-to-string': 'off',
+            '@typescript-eslint/no-dynamic-delete': 'off',
+            '@typescript-eslint/no-redundant-type-constituents': 'off',
+        },
+    },
+    {
+        files: ['**/*.js'],
+        ...tseslint.configs.disableTypeChecked,
+    },
+);
+`;
+
+        fs.writeFileSync(eslintPath, content);
+        this.logger.success('  Created eslint.config.js');
+    }
+
+    private createPrettierConfig(projectDir: string, force?: boolean): void {
+        const prettierPath = path.join(projectDir, '.prettierrc.json');
+        if (fs.existsSync(prettierPath) && !force) return;
+
+        const config = {
+            printWidth: 100,
+            trailingComma: 'all',
+            tabWidth: 4,
+            semi: true,
+            singleQuote: true,
+            quoteProps: 'as-needed',
+            bracketSpacing: true,
+            bracketSameLine: true,
+            arrowParens: 'always',
+            singleAttributePerLine: true,
+        };
+
+        fs.writeFileSync(prettierPath, JSON.stringify(config, null, 4));
+        this.logger.success('  Created .prettierrc.json');
     }
 
     private toPascalCase(str: string): string {

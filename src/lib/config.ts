@@ -10,7 +10,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { CLIConfig, CLIMldsaLevel, NetworkName } from '../types/index.js';
-import { Address } from '@btc-vision/transaction';
 
 /** Default configuration directory */
 const CONFIG_DIR = path.join(os.homedir(), '.opnet');
@@ -38,9 +37,9 @@ const DEFAULT_CONFIG: CLIConfig = {
     ipfsPinningApiKey: '',
     ipfsPinningAuthHeader: 'Authorization',
     registryAddresses: {
-        mainnet: Address.dead().toHex(), // TODO: Set once deployed
-        testnet: Address.dead().toHex(), // TODO: Set once deployed
-        regtest: Address.dead().toHex(), // TODO: Set once deployed
+        mainnet: '', // TODO: Set once deployed
+        testnet: '', // TODO: Set once deployed
+        regtest: '', // TODO: Set once deployed
     },
     defaultMldsaLevel: 44,
     indexerUrl: 'https://indexer.opnet.org',
