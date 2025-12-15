@@ -70,6 +70,11 @@ export enum PluginType {
 }
 
 /**
+ * Registry plugin type string
+ */
+export type RegistryPluginType = 'standalone' | 'library';
+
+/**
  * .opnet binary format constants
  */
 export const OPNET_BINARY = {

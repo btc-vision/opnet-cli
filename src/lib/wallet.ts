@@ -7,7 +7,7 @@
  */
 
 import { networks, Network } from '@btc-vision/bitcoin';
-import { MLDSASecurityLevel } from '@btc-vision/bip32';
+import { MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/bip32';
 import { Mnemonic, Wallet, EcKeyPair, MessageSigner } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
 
@@ -80,11 +80,12 @@ export class CLIWallet {
 
         if (credentials.wif && credentials.mldsaPrivateKey) {
             // Advanced method: use WIF + standalone MLDSA key
-            const wallet = Wallet.fromWif(credentials.wif, network);
-
-            // For standalone MLDSA keys, we need to set the MLDSA keypair separately
-            // This requires the wallet to support external MLDSA key injection
-            // Note: This depends on the actual Wallet class API
+            const wallet = Wallet.fromWif(
+                credentials.wif,
+                credentials.mldsaPrivateKey,
+                network,
+                securityLevel,
+            );
             return new CLIWallet(wallet, network, credentials.mldsaLevel);
         }
 
@@ -148,7 +149,7 @@ export class CLIWallet {
      * Get the MLDSA public key
      */
     get mldsaPublicKey(): Buffer {
-        return this.wallet.mldsaKeypair.publicKey;
+        return Buffer.from(this.wallet.mldsaKeypair.publicKey);
     }
 
     /**
@@ -180,20 +181,34 @@ export class CLIWallet {
      * @returns The MLDSA signature
      */
     signMLDSA(data: Buffer): Buffer {
-        const signature = MessageSigner.signMLDSAMessage(
+        const result = MessageSigner.signMLDSAMessage(
+            this.wallet.mldsaKeypair,
             data,
-            this.wallet.mldsaKeypair.privateKey,
-            getMLDSASecurityLevel(this.mldsaLevel),
         );
-        return Buffer.from(signature);
+        return Buffer.from(result.signature);
     }
 
     /**
-     * Verify an MLDSA signature
+     * Verify an MLDSA signature using this wallet's keypair
      *
      * @param data - The original data that was signed
      * @param signature - The signature to verify
-     * @param publicKey - The public key to verify against
+     * @returns True if the signature is valid
+     */
+    verifyMLDSA(data: Buffer, signature: Buffer): boolean {
+        return MessageSigner.verifyMLDSASignature(
+            this.wallet.mldsaKeypair,
+            data,
+            signature,
+        );
+    }
+
+    /**
+     * Verify an MLDSA signature using a public key buffer
+     *
+     * @param data - The original data that was signed
+     * @param signature - The signature to verify
+     * @param publicKey - The MLDSA public key buffer
      * @param level - The MLDSA security level
      * @returns True if the signature is valid
      */
@@ -203,12 +218,18 @@ export class CLIWallet {
         publicKey: Buffer,
         level: MLDSALevel,
     ): boolean {
-        return MessageSigner.verifyMLDSASignature(
-            data,
-            signature,
+        const securityLevel = getMLDSASecurityLevel(level);
+        // Create a dummy chain code (not needed for verification)
+        const dummyChainCode = new Uint8Array(32);
+        // Create a public-key-only keypair for verification
+        const keypair = QuantumBIP32Factory.fromPublicKey(
             publicKey,
-            getMLDSASecurityLevel(level),
+            dummyChainCode,
+            networks.bitcoin, // Network doesn't matter for signature verification
+            securityLevel,
         );
+        // Verify signature directly using the keypair
+        return keypair.verify(data, signature);
     }
 }
 

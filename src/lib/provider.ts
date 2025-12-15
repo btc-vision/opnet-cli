@@ -6,9 +6,7 @@
  * @module lib/provider
  */
 
-import { JSONRpcProvider, Contract, BitcoinInterface, BitcoinInterfaceAbi } from 'opnet';
-import { Network } from '@btc-vision/bitcoin';
-import { Address } from '@btc-vision/transaction';
+import { JSONRpcProvider } from 'opnet';
 
 import { NetworkName } from '../types/index.js';
 import { getRpcUrl, getRegistryAddress, loadConfig } from './config.js';
@@ -53,42 +51,6 @@ export function getProvider(network?: NetworkName): JSONRpcProvider {
  */
 export function clearProviderCache(): void {
     providerCache.clear();
-}
-
-/**
- * Contract wrapper that handles instantiation and method calls
- */
-export class ContractWrapper<T extends BitcoinInterface> {
-    private readonly contract: Contract<T>;
-    private readonly provider: JSONRpcProvider;
-    private readonly network: Network;
-
-    constructor(
-        address: string,
-        abi: BitcoinInterfaceAbi,
-        provider: JSONRpcProvider,
-        network: Network,
-    ) {
-        this.provider = provider;
-        this.network = network;
-
-        const contractAddress = Address.fromString(address);
-        this.contract = new Contract<T>(contractAddress, abi, this.provider, this.network);
-    }
-
-    /**
-     * Get the underlying contract instance
-     */
-    get instance(): Contract<T> {
-        return this.contract;
-    }
-
-    /**
-     * Get the contract address
-     */
-    get address(): Address {
-        return this.contract.address;
-    }
 }
 
 /**
@@ -151,8 +113,9 @@ export async function getBalance(address: string, network?: NetworkName): Promis
 export async function broadcastTransaction(
     rawTx: string,
     network?: NetworkName,
+    isPsbt: boolean = false,
 ): Promise<string> {
     const provider = getProvider(network);
-    const result = await provider.sendRawTransaction(rawTx);
-    return result.result;
+    const result = await provider.sendRawTransaction(rawTx, isPsbt);
+    return result.result ?? '';
 }

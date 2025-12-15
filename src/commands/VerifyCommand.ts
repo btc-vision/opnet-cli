@@ -193,18 +193,18 @@ export class VerifyCommand extends BaseCommand {
 
                 console.log('Permissions:');
                 const perms = parsed.metadataObj.permissions;
-                console.log(`  Database:       ${perms.database.enabled ? 'Yes' : 'No'}`);
+                console.log(`  Database:       ${perms.database?.enabled ? 'Yes' : 'No'}`);
                 console.log(
-                    `  Block Hooks:    ${perms.blocks.preProcess || perms.blocks.postProcess || perms.blocks.onChange ? 'Yes' : 'No'}`,
+                    `  Block Hooks:    ${perms.blocks?.preProcess || perms.blocks?.postProcess || perms.blocks?.onChange ? 'Yes' : 'No'}`,
                 );
                 console.log(
-                    `  Epoch Hooks:    ${perms.epochs.onChange || perms.epochs.onFinalized ? 'Yes' : 'No'}`,
+                    `  Epoch Hooks:    ${perms.epochs?.onChange || perms.epochs?.onFinalized ? 'Yes' : 'No'}`,
                 );
-                console.log(`  Mempool Feed:   ${perms.mempool.txFeed ? 'Yes' : 'No'}`);
-                console.log(`  API Endpoints:  ${perms.api.addEndpoints ? 'Yes' : 'No'}`);
-                console.log(`  Websocket:      ${perms.api.addWebsocket ? 'Yes' : 'No'}`);
+                console.log(`  Mempool Feed:   ${perms.mempool?.txFeed ? 'Yes' : 'No'}`);
+                console.log(`  API Endpoints:  ${perms.api?.addEndpoints ? 'Yes' : 'No'}`);
+                console.log(`  Websocket:      ${perms.api?.addWebsocket ? 'Yes' : 'No'}`);
                 console.log(
-                    `  Filesystem:     ${perms.filesystem.configDir || perms.filesystem.tempDir ? 'Yes' : 'No'}`,
+                    `  Filesystem:     ${perms.filesystem?.configDir || perms.filesystem?.tempDir ? 'Yes' : 'No'}`,
                 );
                 console.log('');
             }
