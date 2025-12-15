@@ -9,7 +9,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { CLICredentials, NetworkName, MLDSALevel } from '../types/index.js';
+import { CLICredentials, NetworkName, CLIMldsaLevel } from '../types/index.js';
 import { ensureConfigDir } from './config.js';
 
 /** Credentials file path */
@@ -25,7 +25,7 @@ export function loadCredentials(): CLICredentials | null {
     if (process.env.OPNET_MNEMONIC) {
         return {
             mnemonic: process.env.OPNET_MNEMONIC,
-            mldsaLevel: (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as MLDSALevel) || 44,
+            mldsaLevel: (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
             network: (process.env.OPNET_NETWORK as NetworkName) || 'mainnet',
         };
     }
@@ -34,7 +34,7 @@ export function loadCredentials(): CLICredentials | null {
         return {
             wif: process.env.OPNET_PRIVATE_KEY,
             mldsaPrivateKey: process.env.OPNET_MLDSA_KEY,
-            mldsaLevel: (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as MLDSALevel) || 44,
+            mldsaLevel: (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
             network: (process.env.OPNET_NETWORK as NetworkName) || 'mainnet',
         };
     }
@@ -159,7 +159,7 @@ export function maskSensitive(value: string, showChars: number = 4): string {
  * @param level - The level to validate
  * @returns True if valid MLDSA level
  */
-export function isValidMldsaLevel(level: number): level is MLDSALevel {
+export function isValidMldsaLevel(level: number): level is CLIMldsaLevel {
     return level === 44 || level === 65 || level === 87;
 }
 

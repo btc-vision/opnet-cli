@@ -13,7 +13,7 @@ import { loadManifest, getManifestPath } from '../lib/manifest.js';
 import { buildOpnetBinary, formatFileSize, computeChecksum } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { loadCredentials, canSign } from '../lib/credentials.js';
-import { MLDSALevel } from '../types/index.js';
+import { CLIMldsaLevel } from '../types/index.js';
 
 interface CompileOptions {
     output?: string;
@@ -106,7 +106,7 @@ export class CompileCommand extends BaseCommand {
             // Prepare signing
             let publicKey: Buffer;
             let signature: Buffer;
-            let mldsaLevel: MLDSALevel;
+            let mldsaLevel: CLIMldsaLevel;
 
             if (options.sign) {
                 this.logger.info('Loading wallet for signing...');

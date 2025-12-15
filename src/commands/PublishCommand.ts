@@ -22,7 +22,7 @@ import {
     pluginTypeToRegistry,
     mldsaLevelToRegistry,
 } from '../lib/registry.js';
-import { MLDSALevel, NetworkName } from '../types/index.js';
+import { CLIMldsaLevel, NetworkName } from '../types/index.js';
 
 interface PublishOptions {
     network: string;
@@ -89,7 +89,7 @@ export class PublishCommand extends BaseCommand {
             }
 
             const meta = parsed.metadata;
-            const mldsaLevel = ([44, 65, 87] as const)[parsed.mldsaLevel] as MLDSALevel;
+            const mldsaLevel = ([44, 65, 87] as const)[parsed.mldsaLevel] as CLIMldsaLevel;
             this.logger.success(`Parsed: ${meta.name}@${meta.version}`);
 
             // Load wallet and verify ownership

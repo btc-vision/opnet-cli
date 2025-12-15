@@ -71,8 +71,8 @@ export class SignCommand extends BaseCommand {
 
             // Compute new signature
             this.logger.info('Signing...');
-            const metadataBytes = Buffer.from(parsed.metadata, 'utf-8');
-            const checksum = computeChecksum(metadataBytes, parsed.bytecode, parsed.proto);
+            const metadataBytes = Buffer.from(parsed.rawMetadata, 'utf-8');
+            const checksum = computeChecksum(metadataBytes, parsed.bytecode, parsed.proto ?? Buffer.alloc(0));
             const signature = wallet.signMLDSA(checksum);
             this.logger.success(`Signed (${formatFileSize(signature.length)} signature)`);
 
@@ -84,7 +84,7 @@ export class SignCommand extends BaseCommand {
                 signature,
                 metadata: parsed.metadata,
                 bytecode: parsed.bytecode,
-                proto: parsed.proto,
+                proto: parsed.proto ?? Buffer.alloc(0),
             });
             this.logger.success(`Binary rebuilt (${formatFileSize(newBinary.length)})`);
 

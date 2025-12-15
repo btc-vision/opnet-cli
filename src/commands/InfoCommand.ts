@@ -7,10 +7,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { IPluginPermissions } from '@btc-vision/plugin-sdk';
 import { BaseCommand } from './BaseCommand.js';
-import { parseOpnetBinary, formatFileSize } from '../lib/binary.js';
+import { parseOpnetBinary, formatFileSize, getParsedMldsaLevel } from '../lib/binary.js';
 import { loadManifest, getManifestPath } from '../lib/manifest.js';
-import { MLDSALevel, PluginPermissions } from '../types/index.js';
+import { CLIMldsaLevel } from '../types/index.js';
 
 interface InfoOptions {
     json?: boolean;
@@ -55,7 +56,7 @@ export class InfoCommand extends BaseCommand {
     private displayBinaryInfo(filePath: string, json?: boolean): void {
         const data = fs.readFileSync(filePath);
         const parsed = parseOpnetBinary(data);
-        const mldsaLevel = ([44, 65, 87] as const)[parsed.mldsaLevel] as MLDSALevel;
+        const mldsaLevel = getParsedMldsaLevel(parsed);
 
         const isUnsigned = parsed.publicKey.every((b) => b === 0);
         const publicKeyHash = crypto.createHash('sha256').update(parsed.publicKey).digest('hex');
@@ -71,9 +72,9 @@ export class InfoCommand extends BaseCommand {
                 publicKeyHash: isUnsigned ? null : publicKeyHash,
                 metadata: parsed.metadata,
                 sizes: {
-                    metadata: Buffer.from(parsed.metadata).length,
+                    metadata: parsed.rawMetadata.length,
                     bytecode: parsed.bytecode.length,
-                    proto: parsed.proto.length,
+                    proto: parsed.proto?.length ?? 0,
                     publicKey: parsed.publicKey.length,
                     signature: parsed.signature.length,
                 },
@@ -119,8 +120,8 @@ export class InfoCommand extends BaseCommand {
 
         console.log('Sizes:');
         console.log(`  Bytecode:       ${formatFileSize(parsed.bytecode.length)}`);
-        console.log(`  Metadata:       ${formatFileSize(Buffer.from(parsed.metadata).length)}`);
-        console.log(`  Proto:          ${formatFileSize(parsed.proto.length)}`);
+        console.log(`  Metadata:       ${formatFileSize(parsed.rawMetadata.length)}`);
+        console.log(`  Proto:          ${formatFileSize(parsed.proto?.length ?? 0)}`);
         console.log('');
 
         console.log('Permissions:');
@@ -218,9 +219,17 @@ export class InfoCommand extends BaseCommand {
 
         if (manifest.resources) {
             console.log('Resources:');
-            console.log(`  Max Memory:     ${manifest.resources.maxMemoryMB ?? 'N/A'} MB`);
-            console.log(`  Max CPU:        ${manifest.resources.maxCpuPercent ?? 'N/A'}%`);
-            console.log(`  Max Storage:    ${manifest.resources.maxStorageMB ?? 'N/A'} MB`);
+            if (manifest.resources.memory) {
+                console.log(`  Max Heap:       ${manifest.resources.memory.maxHeapMB ?? 'N/A'} MB`);
+            }
+            if (manifest.resources.cpu) {
+                console.log(`  Max Threads:    ${manifest.resources.cpu.maxThreads ?? 'N/A'}`);
+                console.log(`  Priority:       ${manifest.resources.cpu.priority ?? 'normal'}`);
+            }
+            if (manifest.resources.timeout) {
+                console.log(`  Init Timeout:   ${manifest.resources.timeout.initMs ?? 'N/A'} ms`);
+                console.log(`  Hook Timeout:   ${manifest.resources.timeout.hookMs ?? 'N/A'} ms`);
+            }
             console.log('');
         }
 
@@ -234,14 +243,18 @@ export class InfoCommand extends BaseCommand {
 
         if (manifest.lifecycle) {
             console.log('Lifecycle:');
-            console.log(`  Auto Start:     ${manifest.lifecycle.autoStart ? 'Yes' : 'No'}`);
-            console.log(`  Restart:        ${manifest.lifecycle.restartOnCrash ? 'Yes' : 'No'}`);
-            console.log(`  Max Restarts:   ${manifest.lifecycle.maxRestarts ?? 'N/A'}`);
+            console.log(`  Load Priority:  ${manifest.lifecycle.loadPriority ?? 100}`);
+            console.log(`  Enabled:        ${manifest.lifecycle.enabledByDefault !== false ? 'Yes' : 'No'}`);
+            console.log(`  Requires Restart: ${manifest.lifecycle.requiresRestart ? 'Yes' : 'No'}`);
             console.log('');
         }
     }
 
-    private displayPermissions(permissions: PluginPermissions): void {
+    private displayPermissions(permissions?: IPluginPermissions): void {
+        if (!permissions) {
+            console.log('  (none configured)');
+            return;
+        }
         const db = permissions.database?.enabled ?? false;
         const blocks =
             permissions.blocks?.preProcess ||

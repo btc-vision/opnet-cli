@@ -9,7 +9,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { CLIConfig, NetworkName, MLDSALevel } from '../types/index.js';
+import { CLIConfig, NetworkName, CLIMldsaLevel } from '../types/index.js';
 
 /** Default configuration directory */
 const CONFIG_DIR = path.join(os.homedir(), '.opnet');
@@ -238,7 +238,7 @@ export function getRegistryAddress(network?: NetworkName): string {
  *
  * @returns The default MLDSA security level
  */
-export function getDefaultMldsaLevel(): MLDSALevel {
+export function getDefaultMldsaLevel(): CLIMldsaLevel {
     const config = loadConfig();
     return config.defaultMldsaLevel;
 }

@@ -9,7 +9,7 @@ import * as crypto from 'crypto';
 import { BaseCommand } from './BaseCommand.js';
 import { parseOpnetBinary, verifyChecksum, formatFileSize } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
-import { MLDSALevel } from '../types/index.js';
+import { CLIMldsaLevel } from '../types/index.js';
 
 interface VerifyOptions {
     verbose?: boolean;
@@ -62,7 +62,7 @@ export class VerifyCommand extends BaseCommand {
             }
 
             // Get MLDSA level from binary
-            const mldsaLevel = ([44, 65, 87] as const)[parsed.mldsaLevel] as MLDSALevel;
+            const mldsaLevel = ([44, 65, 87] as const)[parsed.mldsaLevel] as CLIMldsaLevel;
 
             // Verify checksum
             const checksumValid = verifyChecksum(parsed);
@@ -105,7 +105,7 @@ export class VerifyCommand extends BaseCommand {
                     metadata: parsed.metadata,
                     publicKeyHash: crypto.createHash('sha256').update(parsed.publicKey).digest('hex'),
                     bytecodeSize: parsed.bytecode.length,
-                    protoSize: parsed.proto.length,
+                    protoSize: parsed.proto?.length ?? 0,
                 };
                 console.log(JSON.stringify(output, null, 2));
                 process.exit(isValid ? 0 : 1);
@@ -175,9 +175,9 @@ export class VerifyCommand extends BaseCommand {
             // Verbose output
             if (options.verbose) {
                 console.log('Sizes:');
-                console.log(`  Metadata:       ${formatFileSize(Buffer.from(parsed.metadata).length)}`);
+                console.log(`  Metadata:       ${formatFileSize(parsed.rawMetadata.length)}`);
                 console.log(`  Bytecode:       ${formatFileSize(parsed.bytecode.length)}`);
-                console.log(`  Proto:          ${formatFileSize(parsed.proto.length)}`);
+                console.log(`  Proto:          ${formatFileSize(parsed.proto?.length ?? 0)}`);
                 console.log('');
 
                 console.log('Checksums:');
@@ -193,19 +193,23 @@ export class VerifyCommand extends BaseCommand {
 
                 console.log('Permissions:');
                 const perms = parsed.metadata.permissions;
-                console.log(`  Database:       ${perms.database?.enabled ? 'Yes' : 'No'}`);
-                console.log(
-                    `  Block Hooks:    ${perms.blocks?.preProcess || perms.blocks?.postProcess || perms.blocks?.onChange ? 'Yes' : 'No'}`,
-                );
-                console.log(
-                    `  Epoch Hooks:    ${perms.epochs?.onChange || perms.epochs?.onFinalized ? 'Yes' : 'No'}`,
-                );
-                console.log(`  Mempool Feed:   ${perms.mempool?.txFeed ? 'Yes' : 'No'}`);
-                console.log(`  API Endpoints:  ${perms.api?.addEndpoints ? 'Yes' : 'No'}`);
-                console.log(`  Websocket:      ${perms.api?.addWebsocket ? 'Yes' : 'No'}`);
-                console.log(
-                    `  Filesystem:     ${perms.filesystem?.configDir || perms.filesystem?.tempDir ? 'Yes' : 'No'}`,
-                );
+                if (perms) {
+                    console.log(`  Database:       ${perms.database?.enabled ? 'Yes' : 'No'}`);
+                    console.log(
+                        `  Block Hooks:    ${perms.blocks?.preProcess || perms.blocks?.postProcess || perms.blocks?.onChange ? 'Yes' : 'No'}`,
+                    );
+                    console.log(
+                        `  Epoch Hooks:    ${perms.epochs?.onChange || perms.epochs?.onFinalized ? 'Yes' : 'No'}`,
+                    );
+                    console.log(`  Mempool Feed:   ${perms.mempool?.txFeed ? 'Yes' : 'No'}`);
+                    console.log(`  API Endpoints:  ${perms.api?.addEndpoints ? 'Yes' : 'No'}`);
+                    console.log(`  Websocket:      ${perms.api?.addWebsocket ? 'Yes' : 'No'}`);
+                    console.log(
+                        `  Filesystem:     ${perms.filesystem?.configDir || perms.filesystem?.tempDir ? 'Yes' : 'No'}`,
+                    );
+                } else {
+                    console.log('  (none configured)');
+                }
                 console.log('');
             }
 

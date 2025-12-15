@@ -11,7 +11,8 @@ import { MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/bip32';
 import { Mnemonic, Wallet, EcKeyPair, MessageSigner } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
 
-import { CLICredentials, NetworkName, MLDSALevel } from '../types/index.js';
+import { MLDSALevel } from '@btc-vision/plugin-sdk';
+import { CLICredentials, NetworkName, CLIMldsaLevel, cliLevelToMLDSALevel, mldsaLevelToCLI } from '../types/index.js';
 import { loadCredentials, canSign } from './credentials.js';
 
 /**
@@ -31,7 +32,7 @@ export function getNetwork(networkName: NetworkName): Network {
 /**
  * Convert CLI MLDSA level to SDK MLDSASecurityLevel enum
  */
-export function getMLDSASecurityLevel(level: MLDSALevel): MLDSASecurityLevel {
+export function getMLDSASecurityLevel(level: CLIMldsaLevel): MLDSASecurityLevel {
     switch (level) {
         case 44:
             return MLDSASecurityLevel.LEVEL2;
@@ -48,9 +49,9 @@ export function getMLDSASecurityLevel(level: MLDSALevel): MLDSASecurityLevel {
 export class CLIWallet {
     private readonly wallet: Wallet;
     private readonly network: Network;
-    private readonly mldsaLevel: MLDSALevel;
+    private readonly mldsaLevel: CLIMldsaLevel;
 
-    private constructor(wallet: Wallet, network: Network, mldsaLevel: MLDSALevel) {
+    private constructor(wallet: Wallet, network: Network, mldsaLevel: CLIMldsaLevel) {
         this.wallet = wallet;
         this.network = network;
         this.mldsaLevel = mldsaLevel;
@@ -163,7 +164,7 @@ export class CLIWallet {
     /**
      * Get the current MLDSA security level
      */
-    get securityLevel(): MLDSALevel {
+    get securityLevel(): CLIMldsaLevel {
         return this.mldsaLevel;
     }
 
@@ -216,7 +217,7 @@ export class CLIWallet {
         data: Buffer,
         signature: Buffer,
         publicKey: Buffer,
-        level: MLDSALevel,
+        level: CLIMldsaLevel,
     ): boolean {
         const securityLevel = getMLDSASecurityLevel(level);
         // Create a dummy chain code (not needed for verification)
@@ -239,7 +240,7 @@ export class CLIWallet {
  * @param level - The MLDSA security level
  * @returns Object containing privateKey and publicKey buffers
  */
-export function generateMLDSAKeypair(level: MLDSALevel): {
+export function generateMLDSAKeypair(level: CLIMldsaLevel): {
     privateKey: Buffer;
     publicKey: Buffer;
 } {

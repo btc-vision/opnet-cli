@@ -9,7 +9,7 @@ import { input, select, confirm, password } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
 import { saveCredentials, isValidMldsaLevel, isValidNetwork } from '../lib/credentials.js';
 import { validateMnemonic } from '../lib/wallet.js';
-import { CLICredentials, NetworkName, MLDSALevel } from '../types/index.js';
+import { CLICredentials, NetworkName, CLIMldsaLevel } from '../types/index.js';
 
 interface LoginOptions {
     mnemonic?: string;
@@ -80,31 +80,31 @@ export class LoginCommand extends BaseCommand {
         const mldsaLevelNum = parseInt(options.mldsaLevel, 10);
         if (!isValidMldsaLevel(mldsaLevelNum)) {
             this.exitWithError(`Invalid MLDSA level: ${options.mldsaLevel}. Valid: 44, 65, 87`);
-            throw new Error('Unreachable'); // Helps TypeScript
         }
+        const mldsaLevel: CLIMldsaLevel = mldsaLevelNum;
 
         if (options.mnemonic) {
             if (!validateMnemonic(options.mnemonic)) {
                 this.exitWithError('Invalid mnemonic phrase');
             }
-            return { mnemonic: options.mnemonic, mldsaLevel: mldsaLevelNum, network: options.network };
+            return { mnemonic: options.mnemonic, mldsaLevel, network: options.network };
         }
 
         if (options.wif && options.mldsa) {
             return {
                 wif: options.wif,
                 mldsaPrivateKey: options.mldsa,
-                mldsaLevel: mldsaLevelNum,
+                mldsaLevel,
                 network: options.network,
             };
         }
 
-        return this.interactiveLogin(options.network, mldsaLevelNum);
+        return this.interactiveLogin(options.network, mldsaLevel);
     }
 
     private async interactiveLogin(
         defaultNetwork: NetworkName,
-        defaultLevel: MLDSALevel,
+        defaultLevel: CLIMldsaLevel,
     ): Promise<CLICredentials> {
         this.logger.info('OPNet Wallet Configuration\n');
 
@@ -142,7 +142,7 @@ export class LoginCommand extends BaseCommand {
                 { name: 'MLDSA-87 (Level 5, most secure)', value: 87, description: '2592 byte public key' },
             ],
             default: defaultLevel,
-        }) as MLDSALevel;
+        }) as CLIMldsaLevel;
 
         if (loginMethod === 'mnemonic') {
             const mnemonic = await password({

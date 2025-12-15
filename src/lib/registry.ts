@@ -10,7 +10,8 @@ import { getContract } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
 
-import { NetworkName, MLDSALevel, PluginPermissions, RegistryPluginType } from '../types/index.js';
+import { NetworkName, CLIMldsaLevel, RegistryPluginType } from '../types/index.js';
+import { IPluginPermissions } from '@btc-vision/plugin-sdk';
 import { IPackageRegistry } from '../types/PackageRegistry.js';
 import { getProvider, getRegistryContractAddress } from './provider.js';
 import { getNetwork } from './wallet.js';
@@ -388,7 +389,7 @@ export function parsePackageName(fullName: string): { scope: string | null; name
  * @param permissions - Plugin permissions
  * @returns SHA-256 hash as Uint8Array
  */
-export function computePermissionsHash(permissions: PluginPermissions): Uint8Array {
+export function computePermissionsHash(permissions: IPluginPermissions | undefined): Uint8Array {
     const json = JSON.stringify(permissions);
     const hash = crypto.createHash('sha256').update(json).digest();
     return new Uint8Array(hash);
@@ -415,8 +416,8 @@ export function encodeDependencies(dependencies: Record<string, string>): Uint8A
  * @param registryLevel - Registry level (1, 2, 3)
  * @returns MLDSA level (44, 65, 87)
  */
-export function registryToMldsaLevel(registryLevel: number): MLDSALevel {
-    const levels: Record<number, MLDSALevel> = {
+export function registryToMldsaLevel(registryLevel: number): CLIMldsaLevel {
+    const levels: Record<number, CLIMldsaLevel> = {
         1: 44,
         2: 65,
         3: 87,
@@ -430,8 +431,8 @@ export function registryToMldsaLevel(registryLevel: number): MLDSALevel {
  * @param mldsaLevel - MLDSA level (44, 65, 87)
  * @returns Registry level (1, 2, 3)
  */
-export function mldsaLevelToRegistry(mldsaLevel: MLDSALevel): number {
-    const levels: Record<MLDSALevel, number> = {
+export function mldsaLevelToRegistry(mldsaLevel: CLIMldsaLevel): number {
+    const levels: Record<CLIMldsaLevel, number> = {
         44: 1,
         65: 2,
         87: 3,

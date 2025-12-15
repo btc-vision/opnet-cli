@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
 import { parseOpnetBinary, formatFileSize } from '../lib/binary.js';
-import { MLDSALevel } from '../types/index.js';
+import { CLIMldsaLevel } from '../types/index.js';
 
 interface ListOptions {
     dir?: string;
@@ -23,7 +23,7 @@ interface PluginInfo {
     type: string;
     size: number;
     signed: boolean;
-    mldsaLevel: MLDSALevel;
+    mldsaLevel: CLIMldsaLevel;
     author: string;
     description?: string;
 }

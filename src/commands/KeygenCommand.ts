@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import { BaseCommand } from './BaseCommand.js';
 import { generateMLDSAKeypair, generateMnemonic, computePublicKeyHash } from '../lib/wallet.js';
 import { isValidMldsaLevel } from '../lib/credentials.js';
-import { MLDSALevel } from '../types/index.js';
+import { CLIMldsaLevel } from '../types/index.js';
 
 export class KeygenCommand extends BaseCommand {
     constructor() {
