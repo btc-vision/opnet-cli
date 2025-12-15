@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/cli",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "module",
     "description": "CLI for the OPNet plugin ecosystem - scaffolding, compilation, signing, and registry interaction",
     "author": "OP_NET",
@@ -53,7 +53,7 @@
         "bytenode": "^1.5.7",
         "commander": "^14.0.0",
         "esbuild": "^0.25.5",
-        "opnet": "^1.7.17",
+        "opnet": "^1.7.18",
         "ora": "^8.2.0"
     },
     "devDependencies": {
