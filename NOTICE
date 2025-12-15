@@ -1,0 +1,17 @@
+OPNet CLI
+Copyright 2025 Orange Pill Labs Holding Ltd.
+
+This product includes software developed at
+Orange Pill Labs Holding Ltd. (https://opnet.org/).
+
+Third-party dependencies:
+- commander: MIT License
+- inquirer: MIT License
+- chalk: MIT License
+- ora: MIT License
+- esbuild: MIT License
+- bytenode: MIT License
+- @btc-vision/transaction: Apache-2.0
+- @btc-vision/bitcoin: Apache-2.0
+- @btc-vision/bip32: Apache-2.0
+- opnet: Apache-2.0
