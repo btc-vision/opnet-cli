@@ -44,16 +44,17 @@
         "test": "echo \"Tests not yet implemented\""
     },
     "dependencies": {
-        "@btc-vision/bitcoin": "^6.4.11",
         "@btc-vision/bip32": "^6.0.3",
+        "@btc-vision/bitcoin": "^6.4.11",
         "@btc-vision/logger": "^1.0.0",
+        "@btc-vision/plugin-sdk": "^1.0.0",
         "@btc-vision/transaction": "^1.7.19",
         "@inquirer/prompts": "^7.5.3",
-        "opnet": "^1.7.17",
         "bytenode": "^1.5.7",
         "chalk": "^5.4.2",
         "commander": "^14.0.0",
         "esbuild": "^0.25.5",
+        "opnet": "^1.7.17",
         "ora": "^8.2.0"
     },
     "devDependencies": {

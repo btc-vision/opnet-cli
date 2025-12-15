@@ -52,7 +52,7 @@ export class SignCommand extends BaseCommand {
             this.logger.info('Parsing binary...');
             const data = fs.readFileSync(file);
             const parsed = parseOpnetBinary(data);
-            this.logger.success(`Parsed: ${parsed.metadataObj.name}@${parsed.metadataObj.version}`);
+            this.logger.success(`Parsed: ${parsed.metadata.name}@${parsed.metadata.version}`);
 
             // Check if already signed by a different key
             const isUnsigned = parsed.publicKey.every((b) => b === 0);
@@ -82,7 +82,7 @@ export class SignCommand extends BaseCommand {
                 mldsaLevel: wallet.securityLevel,
                 publicKey: wallet.mldsaPublicKey,
                 signature,
-                metadata: parsed.metadataObj,
+                metadata: parsed.metadata,
                 bytecode: parsed.bytecode,
                 proto: parsed.proto,
             });
@@ -96,7 +96,7 @@ export class SignCommand extends BaseCommand {
             this.logger.success('Plugin signed successfully!');
             console.log('');
             console.log(`Output:       ${outputPath}`);
-            console.log(`Plugin:       ${parsed.metadataObj.name}@${parsed.metadataObj.version}`);
+            console.log(`Plugin:       ${parsed.metadata.name}@${parsed.metadata.version}`);
             console.log(`MLDSA Level:  ${wallet.securityLevel}`);
             console.log(`Publisher:    ${newPkHash.substring(0, 32)}...`);
             console.log('');

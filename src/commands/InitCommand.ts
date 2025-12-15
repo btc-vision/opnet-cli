@@ -158,28 +158,82 @@ export class InitCommand extends BaseCommand {
         projectDir: string,
         config: { pluginName: string; authorName: string; authorEmail?: string; description?: string; pluginType: 'standalone' | 'library' },
     ): void {
-        const manifest = {
+        const manifest: Record<string, unknown> = {
             name: config.pluginName,
             version: '1.0.0',
             opnetVersion: '^1.0.0',
             main: 'dist/index.jsc',
             target: 'bytenode',
             type: 'plugin',
-            author: { name: config.authorName, email: config.authorEmail },
-            description: config.description,
+            checksum: '',
+            author: config.authorEmail
+                ? { name: config.authorName, email: config.authorEmail }
+                : { name: config.authorName },
             pluginType: config.pluginType,
             permissions: {
-                database: { enabled: false, collections: [] },
-                blocks: { preProcess: false, postProcess: false, onChange: false },
-                epochs: { onChange: false, onFinalized: false },
-                mempool: { txFeed: false },
-                api: { addEndpoints: false, addWebsocket: false },
-                filesystem: { configDir: false, tempDir: false },
+                database: {
+                    enabled: false,
+                    collections: [],
+                },
+                blocks: {
+                    preProcess: false,
+                    postProcess: false,
+                    onChange: false,
+                },
+                epochs: {
+                    onChange: false,
+                    onFinalized: false,
+                },
+                mempool: {
+                    txFeed: false,
+                    txSubmit: false,
+                },
+                api: {
+                    addEndpoints: false,
+                    addWebsocket: false,
+                },
+                threading: {
+                    maxWorkers: 1,
+                    maxMemoryMB: 256,
+                },
+                filesystem: {
+                    configDir: false,
+                    tempDir: false,
+                },
+                blockchain: {
+                    blocks: false,
+                    transactions: false,
+                    contracts: false,
+                    utxos: false,
+                },
             },
-            resources: { maxMemoryMB: 256, maxCpuPercent: 25, maxStorageMB: 100 },
+            resources: {
+                memory: {
+                    maxHeapMB: 256,
+                    maxOldGenMB: 128,
+                    maxYoungGenMB: 64,
+                },
+                cpu: {
+                    maxThreads: 2,
+                    priority: 'normal',
+                },
+                timeout: {
+                    initMs: 30000,
+                    hookMs: 5000,
+                    shutdownMs: 10000,
+                },
+            },
+            lifecycle: {
+                loadPriority: 100,
+                enabledByDefault: true,
+                requiresRestart: false,
+            },
             dependencies: {},
-            lifecycle: { autoStart: true, restartOnCrash: true, maxRestarts: 3 },
         };
+
+        if (config.description) {
+            manifest.description = config.description;
+        }
 
         fs.writeFileSync(path.join(projectDir, 'plugin.json'), JSON.stringify(manifest, null, 4));
     }
@@ -251,22 +305,44 @@ export class InitCommand extends BaseCommand {
 
         const className = this.toPascalCase(config.pluginName);
         const content = config.pluginType === 'standalone'
-            ? `import { PluginBase, PluginContext } from '@btc-vision/plugin-sdk';
+            ? `import { PluginBase, IPluginContext } from '@btc-vision/plugin-sdk';
 
+/**
+ * ${className} Plugin
+ *
+ * Extend PluginBase and override only the hooks you need.
+ * See the plugin-sdk documentation for available hooks.
+ */
 export default class ${className}Plugin extends PluginBase {
-    public readonly name = '${config.pluginName}';
-    public readonly version = '1.0.0';
-
-    public async onInitialize(context: PluginContext): Promise<void> {
-        this.logger.info('Plugin initialized');
+    /**
+     * Called when the plugin is loaded.
+     * Always call super.onLoad(context) first to initialize this.context.
+     */
+    public async onLoad(context: IPluginContext): Promise<void> {
+        await super.onLoad(context);
+        this.context.logger.info('${className} plugin loaded');
     }
 
-    public async onStart(): Promise<void> {
-        this.logger.info('Plugin started');
+    /**
+     * Called when the plugin is being unloaded.
+     * Clean up any resources here.
+     */
+    public async onUnload(): Promise<void> {
+        this.context.logger.info('${className} plugin unloading');
     }
 
-    public async onStop(): Promise<void> {
-        this.logger.info('Plugin stopped');
+    /**
+     * Called when the plugin is enabled.
+     */
+    public async onEnable(): Promise<void> {
+        this.context.logger.info('${className} plugin enabled');
+    }
+
+    /**
+     * Called when the plugin is disabled.
+     */
+    public async onDisable(): Promise<void> {
+        this.context.logger.info('${className} plugin disabled');
     }
 }
 `

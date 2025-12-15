@@ -3,62 +3,21 @@
  *
  * Implements the OIP-0003 binary format for compiled plugins.
  *
- * Format (all multi-byte integers are little-endian):
- * - Magic bytes: 8 bytes "OPNETPLG" (0x4F504E4554504C47)
- * - Format version: uint32 (4 bytes)
- * - MLDSA level: uint8 (1 byte) - 0=MLDSA44, 1=MLDSA65, 2=MLDSA87
- * - Public key: variable (1312, 1952, or 2592 bytes based on level)
- * - Signature: variable (2420, 3309, or 4627 bytes based on level)
- * - Metadata length: uint32 (4 bytes)
- * - Metadata: JSON bytes
- * - Bytecode length: uint32 (4 bytes)
- * - Bytecode: V8 bytecode bytes
- * - Proto length: uint32 (4 bytes)
- * - Proto: protobuf bytes (can be empty)
- * - Checksum: 32 bytes SHA-256
- *
  * @module lib/binary
  */
 
 import * as crypto from 'crypto';
 import {
-    OPNET_BINARY,
-    ParsedOpnetBinary,
-    PluginManifest,
+    PLUGIN_MAGIC_BYTES,
+    PLUGIN_FORMAT_VERSION,
     MLDSALevel,
-    getPublicKeySize,
-    getSignatureSize,
-} from '../types/index.js';
+    MLDSA_PUBLIC_KEY_SIZES,
+    MLDSA_SIGNATURE_SIZES,
+    IParsedPluginFile,
+    IPluginMetadata,
+} from '@btc-vision/plugin-sdk';
 
-/**
- * Convert MLDSA CLI level (44, 65, 87) to binary format level (0, 1, 2)
- */
-function mldsaLevelToBinary(level: MLDSALevel): number {
-    switch (level) {
-        case 44:
-            return 0;
-        case 65:
-            return 1;
-        case 87:
-            return 2;
-    }
-}
-
-/**
- * Convert binary format level (0, 1, 2) to MLDSA CLI level (44, 65, 87)
- */
-function binaryToMldsaLevel(level: number): MLDSALevel {
-    switch (level) {
-        case 0:
-            return 44;
-        case 1:
-            return 65;
-        case 2:
-            return 87;
-        default:
-            throw new Error(`Invalid binary MLDSA level: ${level}`);
-    }
-}
+import { CLIMldsaLevel, cliLevelToMLDSALevel, mldsaLevelToCLI } from '../types/index.js';
 
 /**
  * Parse a .opnet binary file
@@ -67,7 +26,7 @@ function binaryToMldsaLevel(level: number): MLDSALevel {
  * @returns Parsed binary structure
  * @throws Error if the binary is malformed
  */
-export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
+export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     let offset = 0;
 
     // Check minimum size
@@ -79,9 +38,9 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
     const magic = data.subarray(offset, offset + 8);
     offset += 8;
 
-    if (!magic.equals(OPNET_BINARY.MAGIC)) {
+    if (!magic.equals(PLUGIN_MAGIC_BYTES)) {
         throw new Error(
-            `Invalid magic bytes: expected ${OPNET_BINARY.MAGIC.toString('hex')}, got ${magic.toString('hex')}`,
+            `Invalid magic bytes: expected ${PLUGIN_MAGIC_BYTES.toString('hex')}, got ${magic.toString('hex')}`,
         );
     }
 
@@ -89,25 +48,25 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
     const formatVersion = data.readUInt32LE(offset);
     offset += 4;
 
-    if (formatVersion !== OPNET_BINARY.FORMAT_VERSION) {
+    if (formatVersion !== PLUGIN_FORMAT_VERSION) {
         throw new Error(
-            `Unsupported format version: ${formatVersion} (expected ${OPNET_BINARY.FORMAT_VERSION})`,
+            `Unsupported format version: ${formatVersion} (expected ${PLUGIN_FORMAT_VERSION})`,
         );
     }
 
     // MLDSA level (uint8)
-    const mldsaLevelBinary = data.readUInt8(offset);
+    const mldsaLevelValue = data.readUInt8(offset);
     offset += 1;
 
-    if (mldsaLevelBinary > 2) {
-        throw new Error(`Invalid MLDSA level: ${mldsaLevelBinary} (must be 0, 1, or 2)`);
+    if (mldsaLevelValue > 2) {
+        throw new Error(`Invalid MLDSA level: ${mldsaLevelValue} (must be 0, 1, or 2)`);
     }
 
-    const mldsaLevel = binaryToMldsaLevel(mldsaLevelBinary);
+    const mldsaLevel = mldsaLevelValue as MLDSALevel;
 
     // Get sizes based on level
-    const publicKeySize = getPublicKeySize(mldsaLevel);
-    const signatureSize = getSignatureSize(mldsaLevel);
+    const publicKeySize = MLDSA_PUBLIC_KEY_SIZES[mldsaLevel];
+    const signatureSize = MLDSA_SIGNATURE_SIZES[mldsaLevel];
 
     // Check we have enough data
     const minSize = offset + publicKeySize + signatureSize + 4 + 4 + 4 + 32;
@@ -116,11 +75,11 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
     }
 
     // Public key
-    const publicKey = data.subarray(offset, offset + publicKeySize);
+    const publicKey = Buffer.from(data.subarray(offset, offset + publicKeySize));
     offset += publicKeySize;
 
     // Signature
-    const signature = data.subarray(offset, offset + signatureSize);
+    const signature = Buffer.from(data.subarray(offset, offset + signatureSize));
     offset += signatureSize;
 
     // Metadata length (uint32 LE)
@@ -135,11 +94,11 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
     const metadataBytes = data.subarray(offset, offset + metadataLength);
     offset += metadataLength;
 
-    let metadata: string;
-    let metadataObj: PluginManifest;
+    let rawMetadata: string;
+    let metadata: IPluginMetadata;
     try {
-        metadata = metadataBytes.toString('utf-8');
-        metadataObj = JSON.parse(metadata) as PluginManifest;
+        rawMetadata = metadataBytes.toString('utf-8');
+        metadata = JSON.parse(rawMetadata) as IPluginMetadata;
     } catch {
         throw new Error('Malformed JSON metadata');
     }
@@ -153,7 +112,7 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
     }
 
     // Bytecode
-    const bytecode = data.subarray(offset, offset + bytecodeLength);
+    const bytecode = Buffer.from(data.subarray(offset, offset + bytecodeLength));
     offset += bytecodeLength;
 
     // Proto length (uint32 LE)
@@ -165,7 +124,7 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
     }
 
     // Proto
-    const proto = data.subarray(offset, offset + protoLength);
+    const proto = protoLength > 0 ? Buffer.from(data.subarray(offset, offset + protoLength)) : undefined;
     offset += protoLength;
 
     // Checksum (32 bytes)
@@ -173,18 +132,18 @@ export function parseOpnetBinary(data: Buffer): ParsedOpnetBinary {
         throw new Error('Checksum truncated');
     }
 
-    const checksum = data.subarray(offset, offset + 32);
+    const checksum = Buffer.from(data.subarray(offset, offset + 32));
 
     return {
         formatVersion,
-        mldsaLevel: mldsaLevelBinary,
-        publicKey: Buffer.from(publicKey),
-        signature: Buffer.from(signature),
+        mldsaLevel,
+        publicKey,
+        signature,
         metadata,
-        metadataObj,
-        bytecode: Buffer.from(bytecode),
-        proto: Buffer.from(proto),
-        checksum: Buffer.from(checksum),
+        rawMetadata,
+        bytecode,
+        proto,
+        checksum,
     };
 }
 
@@ -210,9 +169,9 @@ export function computeChecksum(metadata: Buffer, bytecode: Buffer, proto: Buffe
  * @param parsed - The parsed binary structure
  * @returns True if checksum matches
  */
-export function verifyChecksum(parsed: ParsedOpnetBinary): boolean {
-    const metadataBytes = Buffer.from(parsed.metadata, 'utf-8');
-    const computed = computeChecksum(metadataBytes, parsed.bytecode, parsed.proto);
+export function verifyChecksum(parsed: IParsedPluginFile): boolean {
+    const metadataBytes = Buffer.from(parsed.rawMetadata, 'utf-8');
+    const computed = computeChecksum(metadataBytes, parsed.bytecode, parsed.proto ?? Buffer.alloc(0));
     return computed.equals(parsed.checksum);
 }
 
@@ -223,18 +182,20 @@ export function verifyChecksum(parsed: ParsedOpnetBinary): boolean {
  * @returns The assembled binary
  */
 export function buildOpnetBinary(options: {
-    mldsaLevel: MLDSALevel;
+    mldsaLevel: CLIMldsaLevel;
     publicKey: Buffer;
     signature: Buffer;
-    metadata: PluginManifest;
+    metadata: IPluginMetadata;
     bytecode: Buffer;
     proto?: Buffer;
 }): Buffer {
     const { mldsaLevel, publicKey, signature, metadata, bytecode, proto = Buffer.alloc(0) } = options;
 
+    const sdkLevel = cliLevelToMLDSALevel(mldsaLevel);
+
     // Validate sizes
-    const expectedPkSize = getPublicKeySize(mldsaLevel);
-    const expectedSigSize = getSignatureSize(mldsaLevel);
+    const expectedPkSize = MLDSA_PUBLIC_KEY_SIZES[sdkLevel];
+    const expectedSigSize = MLDSA_SIGNATURE_SIZES[sdkLevel];
 
     if (publicKey.length !== expectedPkSize) {
         throw new Error(
@@ -272,15 +233,15 @@ export function buildOpnetBinary(options: {
     let offset = 0;
 
     // Magic bytes
-    OPNET_BINARY.MAGIC.copy(buffer, offset);
+    PLUGIN_MAGIC_BYTES.copy(buffer, offset);
     offset += 8;
 
     // Format version
-    buffer.writeUInt32LE(OPNET_BINARY.FORMAT_VERSION, offset);
+    buffer.writeUInt32LE(PLUGIN_FORMAT_VERSION, offset);
     offset += 4;
 
-    // MLDSA level
-    buffer.writeUInt8(mldsaLevelToBinary(mldsaLevel), offset);
+    // MLDSA level (enum value 0, 1, or 2)
+    buffer.writeUInt8(sdkLevel, offset);
     offset += 1;
 
     // Public key
@@ -327,13 +288,20 @@ export function buildOpnetBinary(options: {
  * @param data - The binary file contents
  * @returns The parsed metadata or null if invalid
  */
-export function extractMetadata(data: Buffer): PluginManifest | null {
+export function extractMetadata(data: Buffer): IPluginMetadata | null {
     try {
         const parsed = parseOpnetBinary(data);
-        return parsed.metadataObj;
+        return parsed.metadata;
     } catch {
         return null;
     }
+}
+
+/**
+ * Get the CLI MLDSA level from parsed binary
+ */
+export function getParsedMldsaLevel(parsed: IParsedPluginFile): CLIMldsaLevel {
+    return mldsaLevelToCLI(parsed.mldsaLevel);
 }
 
 /**

@@ -88,7 +88,7 @@ export class PublishCommand extends BaseCommand {
                 process.exit(1);
             }
 
-            const meta = parsed.metadataObj;
+            const meta = parsed.metadata;
             const mldsaLevel = ([44, 65, 87] as const)[parsed.mldsaLevel] as MLDSALevel;
             this.logger.success(`Parsed: ${meta.name}@${meta.version}`);
 

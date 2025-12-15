@@ -82,14 +82,14 @@ export class ListCommand extends BaseCommand {
 
                     plugins.push({
                         file,
-                        name: parsed.metadataObj.name,
-                        version: parsed.metadataObj.version,
-                        type: parsed.metadataObj.pluginType,
+                        name: parsed.metadata.name,
+                        version: parsed.metadata.version,
+                        type: parsed.metadata.pluginType,
                         size: data.length,
                         signed: !isUnsigned,
                         mldsaLevel,
-                        author: parsed.metadataObj.author.name,
-                        description: parsed.metadataObj.description,
+                        author: parsed.metadata.author.name,
+                        description: parsed.metadata.description,
                     });
                 } catch {
                     plugins.push({

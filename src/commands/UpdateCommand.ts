@@ -73,7 +73,7 @@ export class UpdateCommand extends BaseCommand {
                 try {
                     const data = fs.readFileSync(filePath);
                     const parsed = parseOpnetBinary(data);
-                    const name = parsed.metadataObj.name;
+                    const name = parsed.metadata.name;
 
                     // Filter by package name if specified
                     if (packageName && name !== packageName) {
@@ -88,7 +88,7 @@ export class UpdateCommand extends BaseCommand {
                         continue;
                     }
 
-                    const currentVersion = parsed.metadataObj.version;
+                    const currentVersion = parsed.metadata.version;
                     const latestVersion = packageInfo.latestVersion;
 
                     if (currentVersion === latestVersion) {

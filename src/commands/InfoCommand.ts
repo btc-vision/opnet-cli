@@ -69,7 +69,7 @@ export class InfoCommand extends BaseCommand {
                 mldsaLevel,
                 signed: !isUnsigned,
                 publicKeyHash: isUnsigned ? null : publicKeyHash,
-                metadata: parsed.metadataObj,
+                metadata: parsed.metadata,
                 sizes: {
                     metadata: Buffer.from(parsed.metadata).length,
                     bytecode: parsed.bytecode.length,
@@ -82,7 +82,7 @@ export class InfoCommand extends BaseCommand {
             return;
         }
 
-        const meta = parsed.metadataObj;
+        const meta = parsed.metadata;
 
         this.logger.info('\nOPNet Binary Information\n');
         console.log('─'.repeat(60));

@@ -143,8 +143,8 @@ export class InstallCommand extends BaseCommand {
 
             // Update package name from metadata
             if (packageName === 'unknown') {
-                packageName = parsed.metadataObj.name;
-                version = parsed.metadataObj.version;
+                packageName = parsed.metadata.name;
+                version = parsed.metadata.version;
             }
 
             // Determine output path
@@ -163,9 +163,9 @@ export class InstallCommand extends BaseCommand {
             console.log('');
             this.logger.success('Plugin installed successfully!');
             console.log('');
-            console.log(`Package:  ${parsed.metadataObj.name}`);
-            console.log(`Version:  ${parsed.metadataObj.version}`);
-            console.log(`Type:     ${parsed.metadataObj.pluginType}`);
+            console.log(`Package:  ${parsed.metadata.name}`);
+            console.log(`Version:  ${parsed.metadata.version}`);
+            console.log(`Type:     ${parsed.metadata.pluginType}`);
             console.log(`Size:     ${formatFileSize(result.size)}`);
             console.log(`Output:   ${outputPath}`);
             console.log('');

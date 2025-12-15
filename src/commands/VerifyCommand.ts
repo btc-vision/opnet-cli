@@ -102,7 +102,7 @@ export class VerifyCommand extends BaseCommand {
                     signatureValid,
                     signatureError,
                     isUnsigned,
-                    metadata: parsed.metadataObj,
+                    metadata: parsed.metadata,
                     publicKeyHash: crypto.createHash('sha256').update(parsed.publicKey).digest('hex'),
                     bytecodeSize: parsed.bytecode.length,
                     protoSize: parsed.proto.length,
@@ -123,10 +123,10 @@ export class VerifyCommand extends BaseCommand {
 
             // Plugin info
             console.log('Plugin:');
-            console.log(`  Name:           ${parsed.metadataObj.name}`);
-            console.log(`  Version:        ${parsed.metadataObj.version}`);
-            console.log(`  Type:           ${parsed.metadataObj.pluginType}`);
-            console.log(`  OPNet Version:  ${parsed.metadataObj.opnetVersion}`);
+            console.log(`  Name:           ${parsed.metadata.name}`);
+            console.log(`  Version:        ${parsed.metadata.version}`);
+            console.log(`  Type:           ${parsed.metadata.pluginType}`);
+            console.log(`  OPNet Version:  ${parsed.metadata.opnetVersion}`);
             console.log('');
 
             // Cryptographic info
@@ -185,14 +185,14 @@ export class VerifyCommand extends BaseCommand {
                 console.log('');
 
                 console.log('Author:');
-                console.log(`  Name:           ${parsed.metadataObj.author.name}`);
-                if (parsed.metadataObj.author.email) {
-                    console.log(`  Email:          ${parsed.metadataObj.author.email}`);
+                console.log(`  Name:           ${parsed.metadata.author.name}`);
+                if (parsed.metadata.author.email) {
+                    console.log(`  Email:          ${parsed.metadata.author.email}`);
                 }
                 console.log('');
 
                 console.log('Permissions:');
-                const perms = parsed.metadataObj.permissions;
+                const perms = parsed.metadata.permissions;
                 console.log(`  Database:       ${perms.database?.enabled ? 'Yes' : 'No'}`);
                 console.log(
                     `  Block Hooks:    ${perms.blocks?.preProcess || perms.blocks?.postProcess || perms.blocks?.onChange ? 'Yes' : 'No'}`,

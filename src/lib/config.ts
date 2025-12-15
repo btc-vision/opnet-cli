@@ -20,11 +20,11 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
  * Default CLI configuration
  */
 const DEFAULT_CONFIG: CLIConfig = {
-    defaultNetwork: 'mainnet',
+    defaultNetwork: 'regtest',
     rpcUrls: {
         mainnet: 'https://api.opnet.org',
         testnet: 'https://testnet.opnet.org',
-        regtest: 'http://localhost:9001',
+        regtest: 'https://regtest.opnet.org',
     },
     ipfsGateway: 'https://ipfs.opnet.org/ipfs/',
     ipfsGateways: [
