@@ -6,12 +6,13 @@
  * @module lib/wallet
  */
 
-import { Network, networks } from '@btc-vision/bitcoin';
-import { MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/bip32';
-import { EcKeyPair, MessageSigner, Mnemonic, Wallet } from '@btc-vision/transaction';
+import { Network, networks, Signer } from '@btc-vision/bitcoin';
+import { MLDSASecurityLevel, QuantumBIP32Factory, QuantumBIP32Interface } from '@btc-vision/bip32';
+import { Address, EcKeyPair, MessageSigner, Mnemonic, Wallet } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
 import { CLICredentials, CLIMldsaLevel, NetworkName } from '../types/index.js';
 import { canSign, loadCredentials } from './credentials.js';
+import { ECPairInterface } from 'ecpair';
 
 /**
  * Convert CLI network name to bitcoin-js Network object
@@ -55,6 +56,10 @@ export class CLIWallet {
         this.mldsaLevel = mldsaLevel;
     }
 
+    get address(): Address {
+        return this.wallet.address;
+    }
+
     /**
      * Get the P2TR (taproot) address
      */
@@ -63,23 +68,16 @@ export class CLIWallet {
     }
 
     /**
-     * Get the underlying Wallet instance
-     */
-    get underlyingWallet(): Wallet {
-        return this.wallet;
-    }
-
-    /**
      * Get the Bitcoin keypair for classical signing
      */
-    get keypair(): EcKeyPair {
+    get keypair(): Signer | ECPairInterface | null {
         return this.wallet.keypair;
     }
 
     /**
      * Get the MLDSA keypair for quantum-resistant signing
      */
-    get mldsaKeypair(): EcKeyPair {
+    get mldsaKeypair(): QuantumBIP32Interface {
         return this.wallet.mldsaKeypair;
     }
 
@@ -103,13 +101,6 @@ export class CLIWallet {
      */
     get securityLevel(): CLIMldsaLevel {
         return this.mldsaLevel;
-    }
-
-    /**
-     * Get the network this wallet is configured for
-     */
-    get walletNetwork(): Network {
-        return this.network;
     }
 
     /**

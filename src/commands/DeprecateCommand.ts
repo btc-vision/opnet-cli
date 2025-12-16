@@ -6,9 +6,15 @@
 
 import { confirm, input } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { getPackage, getVersion, isVersionImmutable } from '../lib/registry.js';
+import { getPackage, getRegistryContract, getVersion, isVersionImmutable } from '../lib/registry.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
+import {
+    buildTransactionParams,
+    checkBalance,
+    formatSats,
+    getWalletAddress,
+} from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
 
 interface DeprecateOptions {
@@ -48,7 +54,7 @@ export class DeprecateCommand extends BaseCommand {
                 this.logger.warn('Run `opnet login` to configure your wallet.');
                 process.exit(1);
             }
-            CLIWallet.fromCredentials(credentials);
+            const wallet = CLIWallet.fromCredentials(credentials);
             this.logger.success('Wallet loaded');
 
             // Get package info
@@ -128,19 +134,50 @@ export class DeprecateCommand extends BaseCommand {
                 }
             }
 
+            // Check wallet balance
+            this.logger.info('Checking wallet balance...');
+            const { sufficient, balance } = await checkBalance(wallet, network);
+            if (!sufficient) {
+                this.logger.fail('Insufficient balance');
+                this.logger.error(`Wallet balance: ${formatSats(balance)}`);
+                this.logger.error('Please fund your wallet before deprecating.');
+                process.exit(1);
+            }
+            this.logger.success(`Wallet balance: ${formatSats(balance)}`);
+
             // Execute deprecation
             this.logger.info('Deprecating version...');
-            this.logger.warn('Deprecation transaction required.');
-            this.logger.log('Transaction would call: deprecateVersion(');
-            this.logger.log(`  packageName: "${packageName}",`);
-            this.logger.log(`  version: "${targetVersion}",`);
-            this.logger.log(`  reason: "${message}"`);
-            this.logger.log(')');
-            this.logger.info('Deprecation (transaction pending)');
+
+            const sender = getWalletAddress(wallet);
+            const contract = getRegistryContract(network, sender);
+            const txParams = buildTransactionParams(wallet, network);
+
+            const deprecateResult = await contract.deprecateVersion(
+                packageName,
+                targetVersion,
+                message,
+            );
+
+            if (deprecateResult.revert) {
+                this.logger.fail('Deprecation would fail');
+                this.logger.error(`Reason: ${deprecateResult.revert}`);
+                process.exit(1);
+            }
+
+            if (deprecateResult.estimatedGas) {
+                this.logger.info(`Estimated gas: ${deprecateResult.estimatedGas} sats`);
+            }
+
+            const receipt = await deprecateResult.sendTransaction(txParams);
 
             this.logger.log('');
-            this.logger.success('Deprecation submitted!');
-            this.logger.warn('Note: Registry transaction support is coming soon.');
+            this.logger.success('Version deprecated successfully!');
+            this.logger.log('');
+            this.logger.log(`Package:        ${packageName}`);
+            this.logger.log(`Version:        ${targetVersion}`);
+            this.logger.log(`Reason:         ${message}`);
+            this.logger.log(`Transaction ID: ${receipt.transactionId}`);
+            this.logger.log(`Fees paid:      ${formatSats(receipt.estimatedFees)}`);
             this.logger.log('');
         } catch (error) {
             this.logger.fail('Deprecation failed');

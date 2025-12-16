@@ -32,8 +32,10 @@ export interface CLIConfig {
     ipfsGateways: string[];
     /** IPFS pinning service endpoint */
     ipfsPinningEndpoint: string;
-    /** IPFS pinning API key */
+    /** IPFS pinning API key (or JWT token) */
     ipfsPinningApiKey: string;
+    /** IPFS pinning API secret (for services requiring key+secret) */
+    ipfsPinningSecret: string;
     /** Authorization header name for pinning service */
     ipfsPinningAuthHeader: string;
     /** Registry contract addresses per network */

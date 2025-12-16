@@ -103,117 +103,131 @@ async function httpRequest(url: string, options: RequestOptions): Promise<Buffer
  * @returns The IPFS CID
  */
 export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult> {
-    const config = loadConfig();
-    const endpoint = config.ipfsPinningEndpoint;
+    try {
+        const config = loadConfig();
+        const endpoint = config.ipfsPinningEndpoint;
 
-    if (!endpoint) {
-        throw new Error(
-            'IPFS pinning endpoint not configured. Run `opnet config set ipfsPinningEndpoint <url>`',
+        if (!endpoint) {
+            throw new Error(
+                'IPFS pinning endpoint not configured. Run `opnet config set ipfsPinningEndpoint <url>`',
+            );
+        }
+
+        // Build multipart form data
+        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+        const fileName = name || 'plugin.opnet';
+
+        const formParts: Buffer[] = [];
+
+        // File part
+        formParts.push(
+            Buffer.from(
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                    `Content-Type: application/octet-stream\r\n\r\n`,
+            ),
         );
-    }
+        formParts.push(data);
+        formParts.push(Buffer.from('\r\n'));
 
-    // Build multipart form data
-    const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
-    const fileName = name || 'plugin.opnet';
+        // End boundary
+        formParts.push(Buffer.from(`--${boundary}--\r\n`));
 
-    const formParts: Buffer[] = [];
+        const body = Buffer.concat(formParts);
 
-    // File part
-    formParts.push(
-        Buffer.from(
-            `--${boundary}\r\n` +
-                `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-                `Content-Type: application/octet-stream\r\n\r\n`,
-        ),
-    );
-    formParts.push(data);
-    formParts.push(Buffer.from('\r\n'));
+        // Build headers
+        const headers: Record<string, string> = {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': body.length.toString(),
+        };
 
-    // End boundary
-    formParts.push(Buffer.from(`--${boundary}--\r\n`));
-
-    const body = Buffer.concat(formParts);
-
-    // Build headers
-    const headers: Record<string, string> = {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': body.length.toString(),
-    };
-
-    // Add authorization if configured
-    if (config.ipfsPinningAuthHeader) {
-        const [headerName, headerValue] = config.ipfsPinningAuthHeader
-            .split(':')
-            .map((s) => s.trim());
-        if (headerName && headerValue) {
-            headers[headerName] = headerValue;
+        // Add authorization if configured
+        if (config.ipfsPinningAuthHeader) {
+            const [headerName, headerValue] = config.ipfsPinningAuthHeader
+                .split(':')
+                .map((s) => s.trim());
+            if (headerName && headerValue) {
+                headers[headerName] = headerValue;
+            }
+        } else if (config.ipfsPinningApiKey) {
+            headers['Authorization'] = `Bearer ${config.ipfsPinningApiKey}`;
         }
-    } else if (config.ipfsPinningApiKey) {
-        headers['Authorization'] = `Bearer ${config.ipfsPinningApiKey}`;
-    }
 
-    // Detect pinning service type from URL and adjust request
-    const url = new URL(endpoint);
+        // Detect pinning service type from URL and adjust request
+        const url = new URL(endpoint);
 
-    let requestUrl: string;
-    if (url.hostname.includes('ipfs.opnet.org')) {
-        // OPNet IPFS gateway - uses standard IPFS API
-        requestUrl = endpoint;
-    } else if (url.hostname.includes('pinata')) {
-        // Pinata-specific endpoint
-        requestUrl = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
-        if (config.ipfsPinningApiKey) {
-            headers['pinata_api_key'] = config.ipfsPinningApiKey;
+        let requestUrl: string;
+        if (url.hostname.includes('ipfs.opnet.org')) {
+            // OPNet IPFS gateway - uses standard IPFS API
+            requestUrl = endpoint;
+        } else if (url.hostname.includes('pinata')) {
+            // Pinata-specific endpoint
+            requestUrl = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+            // Only set pinata_api_key header if using API key (not JWT)
+            // JWT tokens start with "eyJ", API keys don't
+            if (config.ipfsPinningApiKey && !config.ipfsPinningApiKey.startsWith('eyJ')) {
+                headers['pinata_api_key'] = config.ipfsPinningApiKey;
+                if (config.ipfsPinningSecret) {
+                    headers['pinata_secret_api_key'] = config.ipfsPinningSecret;
+                }
+            }
+        } else if (url.hostname.includes('web3.storage') || url.hostname.includes('w3s.link')) {
+            // web3.storage endpoint
+            requestUrl = endpoint.endsWith('/') ? endpoint + 'upload' : endpoint + '/upload';
+        } else if (url.hostname.includes('nft.storage')) {
+            // nft.storage endpoint
+            requestUrl = 'https://api.nft.storage/upload';
+        } else if (url.pathname.includes('/api/v0/')) {
+            // Standard IPFS API endpoint
+            requestUrl = endpoint;
+        } else {
+            // Generic IPFS pinning service (assumed to follow IPFS Pinning Services API)
+            requestUrl = endpoint.endsWith('/') ? endpoint + 'pins' : endpoint + '/pins';
         }
-    } else if (url.hostname.includes('web3.storage') || url.hostname.includes('w3s.link')) {
-        // web3.storage endpoint
-        requestUrl = endpoint.endsWith('/') ? endpoint + 'upload' : endpoint + '/upload';
-    } else if (url.hostname.includes('nft.storage')) {
-        // nft.storage endpoint
-        requestUrl = 'https://api.nft.storage/upload';
-    } else if (url.pathname.includes('/api/v0/')) {
-        // Standard IPFS API endpoint
-        requestUrl = endpoint;
-    } else {
-        // Generic IPFS pinning service (assumed to follow IPFS Pinning Services API)
-        requestUrl = endpoint.endsWith('/') ? endpoint + 'pins' : endpoint + '/pins';
+
+        const response = await httpRequest(requestUrl, {
+            method: 'POST',
+            headers,
+            body,
+            timeout: 120000, // 2 minutes for upload
+        });
+
+        // Parse response to extract CID
+        const result = JSON.parse(response.toString()) as Record<string, unknown>;
+
+        // Handle different response formats
+        let cid: string | undefined;
+
+        if (typeof result.IpfsHash === 'string') {
+            // Pinata format
+            cid = result.IpfsHash;
+        } else if (typeof result.cid === 'string') {
+            // web3.storage / nft.storage format
+            cid = result.cid;
+        } else if (typeof result.Hash === 'string') {
+            // IPFS API format
+            cid = result.Hash;
+        } else if (
+            result.value &&
+            typeof (result.value as Record<string, unknown>).cid === 'string'
+        ) {
+            // NFT.storage wrapped format
+            cid = (result.value as Record<string, unknown>).cid as string;
+        }
+
+        if (!cid) {
+            throw new Error(
+                `Failed to extract CID from pinning response: ${JSON.stringify(result)}`,
+            );
+        }
+
+        return {
+            cid,
+            size: data.length,
+        };
+    } catch (e) {
+        throw new Error(`IPFS pinning failed: ${e instanceof Error ? e.message : String(e)}`);
     }
-
-    const response = await httpRequest(requestUrl, {
-        method: 'POST',
-        headers,
-        body,
-        timeout: 120000, // 2 minutes for upload
-    });
-
-    // Parse response to extract CID
-    const result = JSON.parse(response.toString()) as Record<string, unknown>;
-
-    // Handle different response formats
-    let cid: string | undefined;
-
-    if (typeof result.IpfsHash === 'string') {
-        // Pinata format
-        cid = result.IpfsHash;
-    } else if (typeof result.cid === 'string') {
-        // web3.storage / nft.storage format
-        cid = result.cid;
-    } else if (typeof result.Hash === 'string') {
-        // IPFS API format
-        cid = result.Hash;
-    } else if (result.value && typeof (result.value as Record<string, unknown>).cid === 'string') {
-        // NFT.storage wrapped format
-        cid = (result.value as Record<string, unknown>).cid as string;
-    }
-
-    if (!cid) {
-        throw new Error(`Failed to extract CID from pinning response: ${JSON.stringify(result)}`);
-    }
-
-    return {
-        cid,
-        size: data.length,
-    };
 }
 
 /**

@@ -19,7 +19,7 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 /**
  * Default CLI configuration
  */
-const DEFAULT_CONFIG: CLIConfig = {
+export const DEFAULT_CONFIG: CLIConfig = {
     defaultNetwork: 'regtest',
     rpcUrls: {
         mainnet: 'https://api.opnet.org',
@@ -35,11 +35,12 @@ const DEFAULT_CONFIG: CLIConfig = {
     ],
     ipfsPinningEndpoint: 'https://ipfs.opnet.org/api/v0/add',
     ipfsPinningApiKey: '',
+    ipfsPinningSecret: '',
     ipfsPinningAuthHeader: 'Authorization',
     registryAddresses: {
         mainnet: '', // TODO: Set once deployed
         testnet: '', // TODO: Set once deployed
-        regtest: '', // TODO: Set once deployed
+        regtest: '0x0737d17d0eff9915208f3c20ed7659587889bc94d25972672b3a6c03ff4ddbcc', // TODO: Set once deployed
     },
     defaultMldsaLevel: 44,
     indexerUrl: 'https://indexer.opnet.org',

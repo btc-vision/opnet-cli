@@ -10,7 +10,8 @@
 
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
-Official command-line interface for the OPNet plugin ecosystem. Build, sign, verify, and publish plugins with quantum-resistant MLDSA signatures.
+Official command-line interface for the OPNet plugin ecosystem. Build, sign, verify, and publish plugins with
+quantum-resistant MLDSA signatures.
 
 ## Installation
 
@@ -19,6 +20,7 @@ npm install -g @btc-vision/cli
 ```
 
 Or use npx:
+
 ```bash
 npx @btc-vision/cli <command>
 ```
@@ -93,6 +95,7 @@ opnet login --wif "KwDiBf..." --mldsa "hex-key..."
 ```
 
 **Options:**
+
 - `-m, --mnemonic <phrase>` - BIP-39 mnemonic phrase (24 words)
 - `--wif <key>` - Bitcoin WIF private key (advanced)
 - `--mldsa <key>` - MLDSA private key hex (advanced, requires --wif)
@@ -160,6 +163,7 @@ opnet init --force
 ```
 
 **Options:**
+
 - `-t, --template <type>` - Template type (standalone, library) [default: standalone]
 - `-y, --yes` - Skip prompts and use defaults
 - `--force` - Overwrite existing files
@@ -183,6 +187,7 @@ opnet compile --no-sign
 ```
 
 **Options:**
+
 - `-o, --output <path>` - Output file path
 - `-d, --dir <path>` - Plugin directory [default: current]
 - `--no-sign` - Skip signing (produce unsigned binary)
@@ -200,6 +205,7 @@ opnet verify plugin.opnet --json
 ```
 
 **Options:**
+
 - `-v, --verbose` - Show detailed information
 - `--json` - Output as JSON
 
@@ -229,6 +235,7 @@ opnet sign plugin.opnet --force  # Re-sign with different key
 ```
 
 **Options:**
+
 - `-o, --output <path>` - Output file path [default: overwrites input]
 - `--force` - Force re-signing even if already signed by different key
 
@@ -253,6 +260,7 @@ opnet publish --network testnet
 ```
 
 **Options:**
+
 - `-n, --network <network>` - Network to publish to [default: mainnet]
 - `--dry-run` - Show what would be published without publishing
 - `-y, --yes` - Skip confirmation prompts
@@ -268,6 +276,7 @@ opnet deprecate @scope/plugin 1.0.0 --message "Security vulnerability"
 ```
 
 **Options:**
+
 - `-m, --message <message>` - Deprecation reason/message
 - `-n, --network <network>` - Network [default: mainnet]
 - `-y, --yes` - Skip confirmation
@@ -296,6 +305,7 @@ opnet transfer my-plugin --cancel
 ```
 
 **Options:**
+
 - `-n, --network <network>` - Network [default: mainnet]
 - `-y, --yes` - Skip confirmation
 - `--cancel` - Cancel pending transfer
@@ -328,6 +338,7 @@ opnet install @scope/plugin --output ./my-plugins
 ```
 
 **Options:**
+
 - `-o, --output <path>` - Output directory [default: ./plugins/]
 - `-n, --network <network>` - Network [default: mainnet]
 - `--skip-verify` - Skip signature verification
@@ -348,6 +359,7 @@ opnet update --dir ./my-plugins
 ```
 
 **Options:**
+
 - `-d, --dir <path>` - Plugins directory [default: ./plugins/]
 - `-n, --network <network>` - Network [default: mainnet]
 - `--skip-verify` - Skip signature verification
@@ -365,6 +377,7 @@ opnet list --dir ./my-plugins
 ```
 
 **Options:**
+
 - `-d, --dir <path>` - Plugins directory [default: ./plugins/]
 - `--json` - Output as JSON
 - `-v, --verbose` - Show detailed information
@@ -380,6 +393,7 @@ opnet search plugin-name --json
 ```
 
 **Options:**
+
 - `-n, --network <network>` - Network [default: mainnet]
 - `--json` - Output as JSON
 
@@ -393,7 +407,7 @@ Configuration is stored in `~/.opnet/config.json`:
     "rpcUrls": {
         "mainnet": "https://api.opnet.org",
         "testnet": "https://testnet.opnet.org",
-        "regtest": "http://localhost:9001"
+        "regtest": "https://regtest.opnet.org"
     },
     "ipfsGateway": "https://ipfs.opnet.org/ipfs/",
     "ipfsGateways": [
@@ -414,24 +428,24 @@ Configuration is stored in `~/.opnet/config.json`:
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `OPNET_MNEMONIC` | BIP-39 mnemonic phrase |
-| `OPNET_PRIVATE_KEY` | Bitcoin WIF private key |
-| `OPNET_MLDSA_KEY` | MLDSA private key (hex) |
-| `OPNET_MLDSA_LEVEL` | MLDSA security level (44, 65, 87) |
-| `OPNET_NETWORK` | Network (mainnet, testnet, regtest) |
-| `OPNET_RPC_URL` | RPC endpoint URL |
-| `OPNET_IPFS_GATEWAY` | IPFS gateway URL |
-| `OPNET_IPFS_PINNING_ENDPOINT` | IPFS pinning service endpoint |
-| `OPNET_IPFS_PINNING_KEY` | IPFS pinning API key |
-| `OPNET_REGISTRY_ADDRESS` | Registry contract address |
-| `OPNET_INDEXER_URL` | Indexer API URL |
+| Variable                      | Description                         |
+|-------------------------------|-------------------------------------|
+| `OPNET_MNEMONIC`              | BIP-39 mnemonic phrase              |
+| `OPNET_PRIVATE_KEY`           | Bitcoin WIF private key             |
+| `OPNET_MLDSA_KEY`             | MLDSA private key (hex)             |
+| `OPNET_MLDSA_LEVEL`           | MLDSA security level (44, 65, 87)   |
+| `OPNET_NETWORK`               | Network (mainnet, testnet, regtest) |
+| `OPNET_RPC_URL`               | RPC endpoint URL                    |
+| `OPNET_IPFS_GATEWAY`          | IPFS gateway URL                    |
+| `OPNET_IPFS_PINNING_ENDPOINT` | IPFS pinning service endpoint       |
+| `OPNET_IPFS_PINNING_KEY`      | IPFS pinning API key                |
+| `OPNET_REGISTRY_ADDRESS`      | Registry contract address           |
+| `OPNET_INDEXER_URL`           | Indexer API URL                     |
 
 ## MLDSA Security Levels
 
-| Level | Public Key | Signature | Security |
-|-------|------------|-----------|----------|
+| Level    | Public Key  | Signature   | Security |
+|----------|-------------|-------------|----------|
 | MLDSA-44 | 1,312 bytes | 2,420 bytes | ~128-bit |
 | MLDSA-65 | 1,952 bytes | 3,309 bytes | ~192-bit |
 | MLDSA-87 | 2,592 bytes | 4,627 bytes | ~256-bit |
@@ -470,12 +484,30 @@ The `.opnet` binary format consists of:
     "description": "My OPNet plugin",
     "pluginType": "standalone",
     "permissions": {
-        "database": { "enabled": false, "collections": [] },
-        "blocks": { "preProcess": false, "postProcess": false, "onChange": false },
-        "epochs": { "onChange": false, "onFinalized": false },
-        "mempool": { "txFeed": false },
-        "api": { "addEndpoints": false, "addWebsocket": false },
-        "filesystem": { "configDir": false, "tempDir": false }
+        "database": {
+            "enabled": false,
+            "collections": []
+        },
+        "blocks": {
+            "preProcess": false,
+            "postProcess": false,
+            "onChange": false
+        },
+        "epochs": {
+            "onChange": false,
+            "onFinalized": false
+        },
+        "mempool": {
+            "txFeed": false
+        },
+        "api": {
+            "addEndpoints": false,
+            "addWebsocket": false
+        },
+        "filesystem": {
+            "configDir": false,
+            "tempDir": false
+        }
     },
     "resources": {
         "maxMemoryMB": 256,

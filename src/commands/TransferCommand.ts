@@ -5,15 +5,23 @@
  */
 
 import { confirm, input } from '@inquirer/prompts';
+import { Address } from '@btc-vision/transaction';
 import { BaseCommand } from './BaseCommand.js';
 import {
     getPackage,
     getPendingScopeTransfer,
     getPendingTransfer,
+    getRegistryContract,
     getScope,
 } from '../lib/registry.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
+import {
+    buildTransactionParams,
+    checkBalance,
+    formatSats,
+    getWalletAddress,
+} from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
 
 interface TransferOptions {
@@ -53,7 +61,7 @@ export class TransferCommand extends BaseCommand {
                 this.logger.warn('Run `opnet login` to configure your wallet.');
                 process.exit(1);
             }
-            CLIWallet.fromCredentials(credentials);
+            const wallet = CLIWallet.fromCredentials(credentials);
             this.logger.success('Wallet loaded');
 
             const network = (options?.network || 'mainnet') as NetworkName;
@@ -129,28 +137,82 @@ export class TransferCommand extends BaseCommand {
                 }
             }
 
+            // Check wallet balance
+            this.logger.info('Checking wallet balance...');
+            const { sufficient, balance } = await checkBalance(wallet, network);
+            if (!sufficient) {
+                this.logger.fail('Insufficient balance');
+                this.logger.error(`Wallet balance: ${formatSats(balance)}`);
+                this.logger.error('Please fund your wallet before initiating transfer.');
+                process.exit(1);
+            }
+            this.logger.success(`Wallet balance: ${formatSats(balance)}`);
+
             // Execute transfer
             this.logger.info('Initiating transfer...');
 
+            const sender = getWalletAddress(wallet);
+            const contract = getRegistryContract(network, sender);
+            const txParams = buildTransactionParams(wallet, network);
+            const newOwnerAddress = Address.fromString(targetOwner);
+
             if (isScope) {
                 const scopeName = name.substring(1);
-                this.logger.warn('Transfer transaction required.');
-                this.logger.log('Transaction would call: initiateScopeTransfer(');
-                this.logger.log(`  scopeName: "${scopeName}",`);
-                this.logger.log(`  newOwner: "${targetOwner}"`);
-                this.logger.log(')');
-            } else {
-                this.logger.warn('Transfer transaction required.');
-                this.logger.log('Transaction would call: initiateTransfer(');
-                this.logger.log(`  packageName: "${name}",`);
-                this.logger.log(`  newOwner: "${targetOwner}"`);
-                this.logger.log(')');
-            }
-            this.logger.info('Transfer (transaction pending)');
+                const transferResult = await contract.initiateScopeTransfer(
+                    scopeName,
+                    newOwnerAddress,
+                );
 
-            this.logger.log('');
-            this.logger.success('Transfer initiated!');
-            this.logger.warn('Note: Registry transaction support is coming soon.');
+                if (transferResult.revert) {
+                    this.logger.fail('Transfer initiation would fail');
+                    this.logger.error(`Reason: ${transferResult.revert}`);
+                    process.exit(1);
+                }
+
+                if (transferResult.estimatedGas) {
+                    this.logger.info(`Estimated gas: ${transferResult.estimatedGas} sats`);
+                }
+
+                const receipt = await transferResult.sendTransaction(txParams);
+
+                this.logger.log('');
+                this.logger.success('Scope transfer initiated successfully!');
+                this.logger.log('');
+                this.logger.log(`Scope:          ${name}`);
+                this.logger.log(`New Owner:      ${targetOwner}`);
+                this.logger.log(`Transaction ID: ${receipt.transactionId}`);
+                this.logger.log(`Fees paid:      ${formatSats(receipt.estimatedFees)}`);
+                this.logger.log('');
+                this.logger.warn(
+                    'Note: The new owner must call `opnet accept` to complete the transfer.',
+                );
+            } else {
+                const transferResult = await contract.initiateTransfer(name, newOwnerAddress);
+
+                if (transferResult.revert) {
+                    this.logger.fail('Transfer initiation would fail');
+                    this.logger.error(`Reason: ${transferResult.revert}`);
+                    process.exit(1);
+                }
+
+                if (transferResult.estimatedGas) {
+                    this.logger.info(`Estimated gas: ${transferResult.estimatedGas} sats`);
+                }
+
+                const receipt = await transferResult.sendTransaction(txParams);
+
+                this.logger.log('');
+                this.logger.success('Package transfer initiated successfully!');
+                this.logger.log('');
+                this.logger.log(`Package:        ${name}`);
+                this.logger.log(`New Owner:      ${targetOwner}`);
+                this.logger.log(`Transaction ID: ${receipt.transactionId}`);
+                this.logger.log(`Fees paid:      ${formatSats(receipt.estimatedFees)}`);
+                this.logger.log('');
+                this.logger.warn(
+                    'Note: The new owner must call `opnet accept` to complete the transfer.',
+                );
+            }
             this.logger.log('');
         } catch (error) {
             this.logger.fail('Transfer failed');
@@ -169,6 +231,15 @@ export class TransferCommand extends BaseCommand {
         options: TransferOptions,
     ): Promise<void> {
         this.logger.info('Checking pending transfer...');
+
+        // Load wallet for cancellation
+        const credentials = loadCredentials();
+        if (!credentials || !canSign(credentials)) {
+            this.logger.fail('No credentials configured');
+            this.logger.warn('Run `opnet login` to configure your wallet.');
+            process.exit(1);
+        }
+        const wallet = CLIWallet.fromCredentials(credentials);
 
         if (isScope) {
             const scopeName = name.substring(1);
@@ -191,12 +262,43 @@ export class TransferCommand extends BaseCommand {
                 }
             }
 
+            // Check wallet balance
+            this.logger.info('Checking wallet balance...');
+            const { sufficient, balance } = await checkBalance(wallet, network);
+            if (!sufficient) {
+                this.logger.fail('Insufficient balance');
+                this.logger.error(`Wallet balance: ${formatSats(balance)}`);
+                process.exit(1);
+            }
+            this.logger.success(`Wallet balance: ${formatSats(balance)}`);
+
             this.logger.info('Cancelling transfer...');
-            this.logger.warn('Cancellation transaction required.');
-            this.logger.log('Transaction would call: cancelScopeTransfer(');
-            this.logger.log(`  scopeName: "${scopeName}"`);
-            this.logger.log(')');
-            this.logger.info('Cancellation (transaction pending)');
+
+            const sender = getWalletAddress(wallet);
+            const contract = getRegistryContract(network, sender);
+            const txParams = buildTransactionParams(wallet, network);
+
+            const cancelResult = await contract.cancelScopeTransfer(scopeName);
+
+            if (cancelResult.revert) {
+                this.logger.fail('Cancellation would fail');
+                this.logger.error(`Reason: ${cancelResult.revert}`);
+                process.exit(1);
+            }
+
+            if (cancelResult.estimatedGas) {
+                this.logger.info(`Estimated gas: ${cancelResult.estimatedGas} sats`);
+            }
+
+            const receipt = await cancelResult.sendTransaction(txParams);
+
+            this.logger.log('');
+            this.logger.success('Scope transfer cancelled successfully!');
+            this.logger.log('');
+            this.logger.log(`Scope:          ${name}`);
+            this.logger.log(`Transaction ID: ${receipt.transactionId}`);
+            this.logger.log(`Fees paid:      ${formatSats(receipt.estimatedFees)}`);
+            this.logger.log('');
         } else {
             const pending = await getPendingTransfer(name, network);
             if (!pending) {
@@ -217,18 +319,44 @@ export class TransferCommand extends BaseCommand {
                 }
             }
 
-            this.logger.info('Cancelling transfer...');
-            this.logger.warn('Cancellation transaction required.');
-            this.logger.log('Transaction would call: cancelTransfer(');
-            this.logger.log(`  packageName: "${name}"`);
-            this.logger.log(')');
-            this.logger.info('Cancellation (transaction pending)');
-        }
+            // Check wallet balance
+            this.logger.info('Checking wallet balance...');
+            const { sufficient, balance } = await checkBalance(wallet, network);
+            if (!sufficient) {
+                this.logger.fail('Insufficient balance');
+                this.logger.error(`Wallet balance: ${formatSats(balance)}`);
+                process.exit(1);
+            }
+            this.logger.success(`Wallet balance: ${formatSats(balance)}`);
 
-        this.logger.log('');
-        this.logger.success('Transfer cancellation submitted!');
-        this.logger.warn('Note: Registry transaction support is coming soon.');
-        this.logger.log('');
+            this.logger.info('Cancelling transfer...');
+
+            const sender = getWalletAddress(wallet);
+            const contract = getRegistryContract(network, sender);
+            const txParams = buildTransactionParams(wallet, network);
+
+            const cancelResult = await contract.cancelTransfer(name);
+
+            if (cancelResult.revert) {
+                this.logger.fail('Cancellation would fail');
+                this.logger.error(`Reason: ${cancelResult.revert}`);
+                process.exit(1);
+            }
+
+            if (cancelResult.estimatedGas) {
+                this.logger.info(`Estimated gas: ${cancelResult.estimatedGas} sats`);
+            }
+
+            const receipt = await cancelResult.sendTransaction(txParams);
+
+            this.logger.log('');
+            this.logger.success('Package transfer cancelled successfully!');
+            this.logger.log('');
+            this.logger.log(`Package:        ${name}`);
+            this.logger.log(`Transaction ID: ${receipt.transactionId}`);
+            this.logger.log(`Fees paid:      ${formatSats(receipt.estimatedFees)}`);
+            this.logger.log('');
+        }
     }
 }
 

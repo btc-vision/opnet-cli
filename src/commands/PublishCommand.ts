@@ -17,12 +17,24 @@ import {
     computePermissionsHash,
     encodeDependencies,
     getPackage,
+    getRegistryContract,
     getScope,
     mldsaLevelToRegistry,
     parsePackageName,
     pluginTypeToRegistry,
 } from '../lib/registry.js';
+import {
+    buildTransactionParams,
+    checkBalance,
+    DEFAULT_FEE_RATE,
+    DEFAULT_MAX_SAT_TO_SPEND,
+    formatSats,
+    getWalletAddress,
+    waitForTransactionConfirmation,
+} from '../lib/transaction.js';
 import { CLIMldsaLevel, NetworkName } from '../types/index.js';
+import { PsbtOutputExtended } from '@btc-vision/bitcoin';
+import { StrippedTransactionOutput, TransactionOutputFlags } from 'opnet';
 
 interface PublishOptions {
     network: string;
@@ -116,12 +128,13 @@ export class PublishCommand extends BaseCommand {
 
             // Check registry status
             this.logger.info('Checking registry status...');
-            const { scope, name } = parsePackageName(meta.name);
+            const { scope } = parsePackageName(meta.name);
             const network = (options?.network || 'mainnet') as NetworkName;
 
             // Check if scoped package
             if (scope) {
                 const scopeInfo = await getScope(scope, network);
+
                 if (!scopeInfo) {
                     this.logger.fail(`Scope @${scope} is not registered`);
                     this.logger.warn(
@@ -180,44 +193,141 @@ export class PublishCommand extends BaseCommand {
             const permissionsHash = computePermissionsHash(meta.permissions);
             const dependencies = encodeDependencies(meta.dependencies || {});
 
+            // Check wallet balance
+            this.logger.info('Checking wallet balance...');
+            const { sufficient, balance } = await checkBalance(wallet, network);
+            if (!sufficient) {
+                this.logger.fail('Insufficient balance');
+                this.logger.error(`Wallet balance: ${formatSats(balance)}`);
+                this.logger.error('Please fund your wallet before publishing.');
+                process.exit(1);
+            }
+            this.logger.success(`Wallet balance: ${formatSats(balance)}`);
+
+            // Get contract with sender for write operations
+            const sender = getWalletAddress(wallet);
+            const contract = getRegistryContract(network, sender);
+
+            const treasuryAddress = await contract.getTreasuryAddress();
+
+            const extraUtxo: PsbtOutputExtended = {
+                address: treasuryAddress.properties.treasuryAddress,
+                value: 10_000,
+            };
+
+            let txParams = buildTransactionParams(
+                wallet,
+                network,
+                DEFAULT_MAX_SAT_TO_SPEND,
+                DEFAULT_FEE_RATE,
+                extraUtxo,
+            );
+
             // Register package if new
             if (isNewPackage) {
-                this.logger.info('Registering package...');
-                this.logger.warn('Package registration required.');
-                this.logger.log(`Transaction would call: registerPackage("${meta.name}")`);
-                this.logger.info('Package registration (transaction pending)');
+                this.logger.info('Registering new package...');
+
+                const outSimulation: StrippedTransactionOutput[] = [
+                    {
+                        index: 1,
+                        to: treasuryAddress.properties.treasuryAddress,
+                        value: 10_000n,
+                        flags: TransactionOutputFlags.hasTo,
+                        scriptPubKey: undefined,
+                    },
+                ];
+
+                contract.setTransactionDetails({
+                    inputs: [],
+                    outputs: outSimulation,
+                });
+
+                const registerResult = await contract.registerPackage(meta.name);
+                if (registerResult.revert) {
+                    this.logger.fail('Package registration would fail');
+                    this.logger.error(`Reason: ${registerResult.revert}`);
+                    process.exit(1);
+                }
+
+                if (registerResult.estimatedGas) {
+                    this.logger.info(`Estimated gas: ${registerResult.estimatedGas} sats`);
+                }
+
+                const registerReceipt = await registerResult.sendTransaction(txParams);
+                this.logger.success('Package registration transaction sent');
+                this.logger.log(`Transaction ID: ${registerReceipt.transactionId}`);
+                this.logger.log('');
+
+                // Wait for registration transaction to be confirmed
+                const confirmationResult = await waitForTransactionConfirmation(
+                    registerReceipt.transactionId,
+                    network,
+                    {
+                        message: 'Waiting for package registration to confirm',
+                    },
+                );
+
+                if (!confirmationResult.confirmed) {
+                    if (confirmationResult.revert) {
+                        this.logger.fail('Package registration failed');
+                        this.logger.error(`Reason: ${confirmationResult.revert}`);
+                    } else if (confirmationResult.error) {
+                        this.logger.fail('Package registration not confirmed');
+                        this.logger.error(confirmationResult.error);
+                    }
+                    process.exit(1);
+                }
+
+                this.logger.log('');
             }
+
+            txParams = buildTransactionParams(
+                wallet,
+                network,
+                DEFAULT_MAX_SAT_TO_SPEND,
+                DEFAULT_FEE_RATE,
+            );
 
             // Publish version
             this.logger.info('Publishing version...');
-            this.logger.warn('Version publishing required.');
-            this.logger.log('Transaction would call: publishVersion(');
-            this.logger.log(`  packageName: "${meta.name}",`);
-            this.logger.log(`  version: "${meta.version}",`);
-            this.logger.log(`  ipfsCid: "${pinResult.cid}",`);
-            this.logger.log(`  checksum: <32 bytes>,`);
-            this.logger.log(`  signature: <${parsed.signature.length} bytes>,`);
-            this.logger.log(`  mldsaLevel: ${mldsaLevelToRegistry(mldsaLevel)},`);
-            this.logger.log(`  opnetVersionRange: "${meta.opnetVersion}",`);
-            this.logger.log(`  pluginType: ${pluginTypeToRegistry(meta.pluginType)},`);
-            this.logger.log(`  permissionsHash: <32 bytes>,`);
-            this.logger.log(`  dependencies: <${dependencies.length} bytes>`);
-            this.logger.log(')');
-            this.logger.info('Version publishing (transaction pending)');
+
+            const publishResult = await contract.publishVersion(
+                meta.name,
+                meta.version,
+                pinResult.cid,
+                new Uint8Array(parsed.checksum),
+                new Uint8Array(parsed.signature),
+                mldsaLevelToRegistry(mldsaLevel),
+                meta.opnetVersion,
+                pluginTypeToRegistry(meta.pluginType),
+                permissionsHash,
+                dependencies,
+            );
+
+            if (publishResult.revert) {
+                this.logger.fail('Version publishing would fail');
+                this.logger.error(`Reason: ${publishResult.revert}`);
+                process.exit(1);
+            }
+
+            if (publishResult.estimatedGas) {
+                this.logger.info(`Estimated gas: ${publishResult.estimatedGas} sats`);
+            }
+
+            const publishReceipt = await publishResult.sendTransaction(txParams);
 
             this.logger.log('');
-            this.logger.success('Plugin uploaded successfully!');
+            this.logger.success('Plugin published successfully!');
             this.logger.log('');
-            this.logger.log(`IPFS CID:  ${pinResult.cid}`);
-            this.logger.log(`Gateway:   https://ipfs.opnet.org/ipfs/${pinResult.cid}`);
-            this.logger.log('');
-            this.logger.warn('Note: Registry transaction support is coming soon.');
-            this.logger.warn(
-                'The binary has been uploaded to IPFS and is ready for registry submission.',
-            );
+            this.logger.log(`Package:        ${meta.name}`);
+            this.logger.log(`Version:        ${meta.version}`);
+            this.logger.log(`IPFS CID:       ${pinResult.cid}`);
+            this.logger.log(`Transaction ID: ${publishReceipt.transactionId}`);
+            this.logger.log(`Fees paid:      ${formatSats(publishReceipt.estimatedFees)}`);
+            this.logger.log(`Gateway:        https://ipfs.opnet.org/ipfs/${pinResult.cid}`);
             this.logger.log('');
         } catch (error) {
-            this.logger.fail('Publishing failed');
+            this.logger.fail(`Publishing failed`);
             if (this.isUserCancelled(error)) {
                 this.logger.warn('Publishing cancelled.');
                 process.exit(0);

@@ -73,12 +73,14 @@ const registryCache = new Map<string, IPackageRegistry>();
  * Get the registry contract instance
  *
  * @param network - Network name (defaults to configured default)
+ * @param sender - Optional sender address for write operations
  * @returns Contract instance
  */
-export function getRegistryContract(network?: NetworkName): IPackageRegistry {
+export function getRegistryContract(network?: NetworkName, sender?: Address): IPackageRegistry {
     const config = loadConfig();
     const targetNetwork = network || config.defaultNetwork;
-    const cacheKey = targetNetwork;
+    // Include sender in cache key to handle both read-only and write cases
+    const cacheKey = sender ? `${targetNetwork}:${sender.toHex()}` : targetNetwork;
 
     const cached = registryCache.get(cacheKey);
     if (cached) {
@@ -94,6 +96,7 @@ export function getRegistryContract(network?: NetworkName): IPackageRegistry {
         PACKAGE_REGISTRY_ABI,
         provider,
         bitcoinNetwork,
+        sender,
     );
 
     registryCache.set(cacheKey, contract);

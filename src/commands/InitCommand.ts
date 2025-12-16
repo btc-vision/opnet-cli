@@ -223,12 +223,6 @@ export class InitCommand extends BaseCommand {
                     configDir: false,
                     tempDir: false,
                 },
-                blockchain: {
-                    blocks: false,
-                    transactions: false,
-                    contracts: false,
-                    utxos: false,
-                },
             },
             resources: {
                 memory: {

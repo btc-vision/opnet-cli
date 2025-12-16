@@ -8,8 +8,7 @@ import { Command } from 'commander';
 import * as os from 'os';
 import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
-import { displayConfig, getConfigValue, saveConfig, setConfigValue } from '../lib/config.js';
-import { CLIConfig } from '../types/index.js';
+import { DEFAULT_CONFIG, displayConfig, getConfigValue, saveConfig, setConfigValue, } from '../lib/config.js';
 
 export class ConfigCommand extends BaseCommand {
     constructor() {
@@ -106,33 +105,7 @@ export class ConfigCommand extends BaseCommand {
             return;
         }
 
-        const defaultConfig: CLIConfig = {
-            defaultNetwork: 'mainnet',
-            rpcUrls: {
-                mainnet: 'https://api.opnet.org',
-                testnet: 'https://testnet.opnet.org',
-                regtest: 'http://localhost:9001',
-            },
-            ipfsGateway: 'https://ipfs.opnet.org/ipfs/',
-            ipfsGateways: [
-                'https://ipfs.opnet.org/ipfs/',
-                'https://ipfs.io/ipfs/',
-                'https://cloudflare-ipfs.com/ipfs/',
-                'https://dweb.link/ipfs/',
-            ],
-            ipfsPinningEndpoint: 'https://ipfs.opnet.org/api/v0/add',
-            ipfsPinningApiKey: '',
-            ipfsPinningAuthHeader: 'Authorization',
-            registryAddresses: {
-                mainnet: '',
-                testnet: '',
-                regtest: '',
-            },
-            defaultMldsaLevel: 44,
-            indexerUrl: 'https://indexer.opnet.org',
-        };
-
-        saveConfig(defaultConfig);
+        saveConfig(DEFAULT_CONFIG);
         this.logger.success('Configuration reset to defaults.');
     }
 
