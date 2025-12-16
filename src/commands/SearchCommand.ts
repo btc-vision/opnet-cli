@@ -122,8 +122,7 @@ export class SearchCommand extends BaseCommand {
                 this.logger.info(`  IPFS CID:      ${latestVersionInfo.ipfsCid}`);
                 this.logger.info(`  Deprecated:    ${latestVersionInfo.deprecated ? 'Yes' : 'No'}`);
 
-                const publishDate = new Date(Number(latestVersionInfo.publishedAt) * 1000);
-                this.logger.info(`  Published:     ${publishDate.toISOString().split('T')[0]}`);
+                this.logger.info(`  Published at:  Block ${latestVersionInfo.publishedAt}`);
             }
 
             this.logger.log('');

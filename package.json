@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/cli",
-    "version": "1.0.3",
+    "version": "1.0.2",
     "type": "module",
     "description": "CLI for the OPNet plugin ecosystem - scaffolding, compilation, signing, and registry interaction",
     "author": "OP_NET",
@@ -36,12 +36,14 @@
     },
     "scripts": {
         "build": "gulp build",
+        "postbuild": "node -e \"if(process.platform!=='win32'){require('fs').chmodSync('build/index.js',0o755)}\"",
         "watch": "gulp watch",
         "clean": "gulp clean",
         "lint": "eslint src/",
         "format": "prettier --write src/",
         "start": "node build/index.js",
-        "test": "echo \"Tests not yet implemented\""
+        "test": "echo \"Tests not yet implemented\"",
+        "prepublishOnly": "npm run build"
     },
     "dependencies": {
         "@btc-vision/bip32": "^6.0.3",
