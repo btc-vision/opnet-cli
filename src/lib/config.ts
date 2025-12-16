@@ -27,12 +27,7 @@ export const DEFAULT_CONFIG: CLIConfig = {
         regtest: 'https://regtest.opnet.org',
     },
     ipfsGateway: 'https://ipfs.opnet.org/ipfs/',
-    ipfsGateways: [
-        'https://ipfs.opnet.org/ipfs/',
-        'https://ipfs.io/ipfs/',
-        'https://cloudflare-ipfs.com/ipfs/',
-        'https://dweb.link/ipfs/',
-    ],
+    ipfsGateways: ['https://ipfs.opnet.org/ipfs/'],
     ipfsPinningEndpoint: 'https://ipfs.opnet.org/api/v0/add',
     ipfsPinningApiKey: '',
     ipfsPinningSecret: '',

@@ -70,10 +70,11 @@ program.showSuggestionAfterError();
 
 // Custom error handling
 program.exitOverride((err) => {
-    if (err.code === 'commander.help') {
-        process.exit(0);
-    }
-    if (err.code === 'commander.version') {
+    if (
+        err.code === 'commander.help' ||
+        err.code === 'commander.helpDisplayed' ||
+        err.code === 'commander.version'
+    ) {
         process.exit(0);
     }
     logger.error(`Error: ${err.message}`);
