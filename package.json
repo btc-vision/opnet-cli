@@ -49,7 +49,7 @@
         "@btc-vision/logger": "^1.0.0",
         "@btc-vision/plugin-sdk": "^1.0.0",
         "@btc-vision/transaction": "^1.7.19",
-        "@inquirer/prompts": "^7.5.3",
+        "@inquirer/prompts": "^8.1.0",
         "bytenode": "^1.5.7",
         "commander": "^14.0.0",
         "ecpair": "^2.1.0",
