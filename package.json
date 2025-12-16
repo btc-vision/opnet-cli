@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/cli",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "type": "module",
     "description": "CLI for the OPNet plugin ecosystem - scaffolding, compilation, signing, and registry interaction",
     "author": "OP_NET",
@@ -34,6 +34,9 @@
         "access": "public",
         "tag": "latest"
     },
+    "files": [
+        "build"
+    ],
     "scripts": {
         "build": "gulp build",
         "postbuild": "node -e \"if(process.platform!=='win32'){require('fs').chmodSync('build/index.js',0o755)}\"",
