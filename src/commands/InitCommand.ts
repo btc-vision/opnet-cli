@@ -11,7 +11,7 @@ import { BaseCommand } from './BaseCommand.js';
 import { validatePluginName } from '../lib/manifest.js';
 
 interface InitOptions {
-    template: string;
+    template: 'standalone' | 'library' | undefined;
     yes?: boolean;
     force?: boolean;
 }
