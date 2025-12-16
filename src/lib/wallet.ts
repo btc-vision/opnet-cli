@@ -183,7 +183,7 @@ export class CLIWallet {
         const keypair = QuantumBIP32Factory.fromPublicKey(
             publicKey,
             dummyChainCode,
-            networks.regtest, // Network doesn't matter for signature verification
+            networks.bitcoin, // Network doesn't matter for signature verification
             securityLevel,
         );
 
