@@ -40,6 +40,8 @@ export interface CLIConfig {
     ipfsPinningAuthHeader: string;
     /** Registry contract addresses per network */
     registryAddresses: Record<NetworkName, string>;
+    /** BTC Resolver contract addresses per network */
+    resolverAddresses?: Record<NetworkName, string>;
     /** Default MLDSA security level (44, 65, or 87) */
     defaultMldsaLevel: CLIMldsaLevel;
     /** Indexer API URL for search */

@@ -37,6 +37,11 @@ export const DEFAULT_CONFIG: CLIConfig = {
         testnet: '', // TODO: Set once deployed
         regtest: '0x0737d17d0eff9915208f3c20ed7659587889bc94d25972672b3a6c03ff4ddbcc', // TODO: Set once deployed
     },
+    resolverAddresses: {
+        mainnet: '', // TODO: Set once deployed
+        testnet: '', // TODO: Set once deployed
+        regtest: '0x336dcb0b117e29a61aef4856dc438f9951de39edcc4745a255713da8f807779c',
+    },
     defaultMldsaLevel: 44,
     indexerUrl: 'https://indexer.opnet.org',
 };
@@ -136,6 +141,12 @@ export function loadConfig(): CLIConfig {
             ...fileConfig.registryAddresses,
             ...envOverrides.registryAddresses,
         },
+        resolverAddresses: fileConfig.resolverAddresses
+            ? {
+                  ...DEFAULT_CONFIG.resolverAddresses,
+                  ...fileConfig.resolverAddresses,
+              }
+            : DEFAULT_CONFIG.resolverAddresses,
     };
 }
 

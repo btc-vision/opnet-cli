@@ -371,3 +371,191 @@ export async function uploadPlugin(filePath: string): Promise<PinResult> {
     const fileName = filePath.split('/').pop() || 'plugin.opnet';
     return pinToIPFS(data, fileName);
 }
+
+/**
+ * Recursively get all files in a directory
+ */
+function getAllFiles(dirPath: string, basePath: string = ''): { path: string; fullPath: string }[] {
+    const files: { path: string; fullPath: string }[] = [];
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const fullPath = `${dirPath}/${entry.name}`;
+        const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+
+        if (entry.isDirectory()) {
+            files.push(...getAllFiles(fullPath, relativePath));
+        } else if (entry.isFile()) {
+            files.push({ path: relativePath, fullPath });
+        }
+    }
+
+    return files;
+}
+
+/**
+ * Get MIME type for a file extension
+ */
+function getMimeType(filePath: string): string {
+    const ext = filePath.split('.').pop()?.toLowerCase() || '';
+    const mimeTypes: Record<string, string> = {
+        html: 'text/html',
+        htm: 'text/html',
+        css: 'text/css',
+        js: 'application/javascript',
+        mjs: 'application/javascript',
+        json: 'application/json',
+        png: 'image/png',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        gif: 'image/gif',
+        svg: 'image/svg+xml',
+        ico: 'image/x-icon',
+        webp: 'image/webp',
+        woff: 'font/woff',
+        woff2: 'font/woff2',
+        ttf: 'font/ttf',
+        eot: 'application/vnd.ms-fontobject',
+        txt: 'text/plain',
+        xml: 'application/xml',
+        pdf: 'application/pdf',
+        zip: 'application/zip',
+        wasm: 'application/wasm',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+}
+
+/**
+ * Directory upload result
+ */
+export interface DirectoryPinResult {
+    cid: string;
+    files: number;
+    totalSize: number;
+}
+
+/**
+ * Upload a directory to IPFS
+ *
+ * @param dirPath - Path to the directory to upload
+ * @param wrapWithDirectory - Whether to wrap files in a directory (default: true)
+ * @returns The IPFS CID of the directory
+ */
+export async function uploadDirectory(
+    dirPath: string,
+    wrapWithDirectory: boolean = true,
+): Promise<DirectoryPinResult> {
+    try {
+        const config = loadConfig();
+        const endpoint = config.ipfsPinningEndpoint;
+
+        if (!endpoint) {
+            throw new Error(
+                'IPFS pinning endpoint not configured. Run `opnet config set ipfsPinningEndpoint <url>`',
+            );
+        }
+
+        // Get all files in directory
+        const files = getAllFiles(dirPath);
+        if (files.length === 0) {
+            throw new Error('Directory is empty');
+        }
+
+        // Build multipart form data with all files
+        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+        const formParts: Buffer[] = [];
+        let totalSize = 0;
+
+        for (const file of files) {
+            const data = fs.readFileSync(file.fullPath);
+            totalSize += data.length;
+            const mimeType = getMimeType(file.path);
+
+            // Add file part
+            formParts.push(
+                Buffer.from(
+                    `--${boundary}\r\n` +
+                        `Content-Disposition: form-data; name="file"; filename="${file.path}"\r\n` +
+                        `Content-Type: ${mimeType}\r\n\r\n`,
+                ),
+            );
+            formParts.push(data);
+            formParts.push(Buffer.from('\r\n'));
+        }
+
+        // End boundary
+        formParts.push(Buffer.from(`--${boundary}--\r\n`));
+
+        const body = Buffer.concat(formParts);
+
+        // Build headers
+        const headers: Record<string, string> = {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': body.length.toString(),
+        };
+
+        // Add authorization if configured
+        if (config.ipfsPinningApiKey) {
+            headers['Authorization'] = `Bearer ${config.ipfsPinningApiKey}`;
+        }
+
+        // Build URL with wrap-with-directory parameter
+        const url = new URL(endpoint);
+        if (wrapWithDirectory) {
+            url.searchParams.set('wrap-with-directory', 'true');
+        }
+        // Enable CIDv1 for better compatibility
+        url.searchParams.set('cid-version', '1');
+
+        const response = await httpRequest(url.toString(), {
+            method: 'POST',
+            headers,
+            body,
+            timeout: 300000, // 5 minutes for directory upload
+            followRedirect: true,
+        });
+
+        // Parse NDJSON response (IPFS returns one JSON object per line)
+        const lines = response.toString().trim().split('\n');
+        let rootCid: string | undefined;
+
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            const result = JSON.parse(line) as Record<string, unknown>;
+
+            // The last entry with empty Name is the root directory
+            if (result.Hash && (result.Name === '' || !result.Name)) {
+                rootCid = result.Hash as string;
+            } else if (result.Hash && !rootCid) {
+                // Fallback to last hash if no empty name found
+                rootCid = result.Hash as string;
+            }
+        }
+
+        if (!rootCid) {
+            throw new Error(`Failed to extract root CID from response`);
+        }
+
+        return {
+            cid: rootCid,
+            files: files.length,
+            totalSize,
+        };
+    } catch (e) {
+        throw new Error(
+            `IPFS directory upload failed: ${e instanceof Error ? e.message : String(e)}`,
+        );
+    }
+}
+
+/**
+ * Upload a single file to IPFS (convenience wrapper)
+ *
+ * @param filePath - Path to the file
+ * @returns The IPFS CID
+ */
+export async function uploadFile(filePath: string): Promise<PinResult> {
+    const data = fs.readFileSync(filePath);
+    const fileName = filePath.split('/').pop() || 'file';
+    return pinToIPFS(data, fileName);
+}

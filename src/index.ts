@@ -29,6 +29,9 @@ import { installCommand } from './commands/InstallCommand.js';
 import { updateCommand } from './commands/UpdateCommand.js';
 import { listCommand } from './commands/ListCommand.js';
 import { searchCommand } from './commands/SearchCommand.js';
+import { websitePublishCommand } from './commands/WebsitePublishCommand.js';
+import { domainCommand } from './commands/DomainCommand.js';
+import { websiteDeployCommand } from './commands/WebsiteDeployCommand.js';
 
 const logger = new Logger();
 const program = new Command();
@@ -63,6 +66,11 @@ program.addCommand(installCommand);
 program.addCommand(updateCommand);
 program.addCommand(listCommand);
 program.addCommand(searchCommand);
+
+// Website/Domain commands
+program.addCommand(domainCommand);
+program.addCommand(websitePublishCommand);
+program.addCommand(websiteDeployCommand);
 
 // Error handling
 program.showHelpAfterError();
