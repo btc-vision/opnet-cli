@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/cli",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "type": "module",
     "description": "CLI for the OPNet plugin ecosystem - scaffolding, compilation, signing, and registry interaction",
     "author": "OP_NET",

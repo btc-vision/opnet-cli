@@ -6,15 +6,10 @@
 
 import { confirm, input } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { getPackage, getRegistryContract, getVersion, isVersionImmutable } from '../lib/registry.js';
+import { getPackage, getRegistryContract, getVersion, isVersionImmutable, } from '../lib/registry.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
-import {
-    buildTransactionParams,
-    checkBalance,
-    formatSats,
-    getWalletAddress,
-} from '../lib/transaction.js';
+import { buildTransactionParams, checkBalance, formatSats, getWalletAddress, } from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
 
 interface DeprecateOptions {
