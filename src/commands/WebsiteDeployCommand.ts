@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { CLIWallet, getNetwork } from '../lib/wallet.js';
+import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { uploadDirectory, uploadFile, DirectoryPinResult, PinResult } from '../lib/ipfs.js';
 import { formatFileSize } from '../lib/binary.js';

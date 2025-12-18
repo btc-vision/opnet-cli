@@ -33,7 +33,6 @@ import {
     waitForTransactionConfirmation,
 } from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
-import { getNetwork } from '../lib/wallet.js';
 import {
     CONTENTHASH_TYPE_CIDv0,
     CONTENTHASH_TYPE_CIDv1,

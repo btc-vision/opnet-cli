@@ -9,7 +9,7 @@
 import { Command } from 'commander';
 import { confirm } from '@inquirer/prompts';
 import { Logger } from '@btc-vision/logger';
-import { CLIWallet, getNetwork } from '../lib/wallet.js';
+import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import {
     getResolverContract,
