@@ -250,7 +250,7 @@ export class PublishCommand extends BaseCommand {
                 }
 
                 if (registerResult.estimatedGas) {
-                    this.logger.info(`Estimated gas: ${registerResult.estimatedGas} sats`);
+                    this.logger.info(`Estimated gas: ${registerResult.estimatedGas} gas`);
                 }
 
                 const registerReceipt = await registerResult.sendTransaction(txParams);
@@ -311,7 +311,7 @@ export class PublishCommand extends BaseCommand {
             }
 
             if (publishResult.estimatedGas) {
-                this.logger.info(`Estimated gas: ${publishResult.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${publishResult.estimatedGas} gas`);
             }
 
             const publishReceipt = await publishResult.sendTransaction(txParams);

@@ -121,7 +121,7 @@ export class AcceptCommand extends BaseCommand {
                 }
 
                 if (acceptResult.estimatedGas) {
-                    this.logger.info(`Estimated gas: ${acceptResult.estimatedGas} sats`);
+                    this.logger.info(`Estimated gas: ${acceptResult.estimatedGas} gas`);
                 }
 
                 const receipt = await acceptResult.sendTransaction(txParams);
@@ -197,7 +197,7 @@ export class AcceptCommand extends BaseCommand {
                 }
 
                 if (acceptResult.estimatedGas) {
-                    this.logger.info(`Estimated gas: ${acceptResult.estimatedGas} sats`);
+                    this.logger.info(`Estimated gas: ${acceptResult.estimatedGas} gas`);
                 }
 
                 const receipt = await acceptResult.sendTransaction(txParams);

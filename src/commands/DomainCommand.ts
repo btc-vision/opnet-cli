@@ -12,15 +12,25 @@ import { Logger } from '@btc-vision/logger';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import {
-    getResolverContract,
-    getDomain,
     getContenthash,
     getContenthashTypeName,
-    validateDomainName,
-    getTreasuryAddress,
+    getDomain,
     getDomainPrice,
+    getResolverContract,
+    getTreasuryAddress,
     parseDomainName,
+    validateDomainName,
 } from '../lib/resolver.js';
+import {
+    DEFAULT_DOMAIN_PRICE_SATS,
+    PREMIUM_TIER_0_PRICE_SATS,
+    PREMIUM_TIER_1_PRICE_SATS,
+    PREMIUM_TIER_2_PRICE_SATS,
+    PREMIUM_TIER_3_PRICE_SATS,
+    PREMIUM_TIER_4_PRICE_SATS,
+    PREMIUM_TIER_5_PRICE_SATS,
+    PREMIUM_TIER_6_PRICE_SATS,
+} from '../types/BtcResolver.js';
 import {
     buildTransactionParams,
     checkBalance,
@@ -36,6 +46,49 @@ import { StrippedTransactionOutput, TransactionOutputFlags } from 'opnet';
 
 const logger = new Logger();
 
+/**
+ * Get pricing tier name based on price from contract
+ */
+function getPricingTierName(price: bigint): { tier: string; description: string } {
+    if (price >= PREMIUM_TIER_0_PRICE_SATS) {
+        return {
+            tier: 'Ultra Legendary (Tier 0)',
+            description: '10 BTC - Iconic crypto/tech names',
+        };
+    }
+    if (price >= PREMIUM_TIER_1_PRICE_SATS) {
+        return {
+            tier: 'Legendary (Tier 1)',
+            description: '1 BTC - Single character or top keywords',
+        };
+    }
+    if (price >= PREMIUM_TIER_2_PRICE_SATS) {
+        return {
+            tier: 'Premium (Tier 2)',
+            description: '0.25 BTC - Two character or major protocols',
+        };
+    }
+    if (price >= PREMIUM_TIER_3_PRICE_SATS) {
+        return {
+            tier: 'High Value (Tier 3)',
+            description: '0.1 BTC - Three character or valuable keywords',
+        };
+    }
+    if (price >= PREMIUM_TIER_4_PRICE_SATS) {
+        return {
+            tier: 'Valuable (Tier 4)',
+            description: '0.05 BTC - Four character or common keywords',
+        };
+    }
+    if (price >= PREMIUM_TIER_5_PRICE_SATS) {
+        return { tier: 'Common Premium (Tier 5)', description: '0.01 BTC - Five character domain' };
+    }
+    if (price >= PREMIUM_TIER_6_PRICE_SATS) {
+        return { tier: 'Notable (Tier 6)', description: '0.005 BTC - Notable keyword' };
+    }
+    return { tier: 'Standard', description: '0.001 BTC - Standard domain (6+ chars)' };
+}
+
 interface DomainRegisterOptions {
     network: string;
     dryRun?: boolean;
@@ -49,10 +102,7 @@ interface DomainInfoOptions {
 /**
  * Register a new .btc domain
  */
-async function registerDomain(
-    domain: string,
-    options: DomainRegisterOptions,
-): Promise<void> {
+async function registerDomain(domain: string, options: DomainRegisterOptions): Promise<void> {
     try {
         const network = (options.network || 'mainnet') as NetworkName;
 
@@ -90,11 +140,12 @@ async function registerDomain(
         const price = await getDomainPrice(name, network);
         const treasuryAddr = await getTreasuryAddress(network);
 
+        // Get pricing tier info
+        const pricingTier = getPricingTierName(price);
         logger.info(`Registration price: ${formatSats(price)}`);
-        if (name.length === 3) {
-            logger.warn('Premium pricing applied (3-character domain)');
-        } else if (name.length === 4) {
-            logger.warn('Premium pricing applied (4-character domain)');
+        if (price > DEFAULT_DOMAIN_PRICE_SATS) {
+            logger.warn(`Premium pricing: ${pricingTier.tier}`);
+            logger.info(`  ${pricingTier.description}`);
         }
 
         // Load wallet
@@ -186,7 +237,7 @@ async function registerDomain(
         }
 
         if (registerResult.estimatedGas) {
-            logger.info(`Estimated gas: ${registerResult.estimatedGas} sats`);
+            logger.info(`Estimated gas: ${registerResult.estimatedGas} gas`);
         }
 
         // Build and send transaction
@@ -263,19 +314,15 @@ async function domainInfo(domain: string, options: DomainInfoOptions): Promise<v
 
             // Show pricing info
             const price = await getDomainPrice(name, network);
+            const pricingTier = getPricingTierName(price);
             logger.log('');
             logger.info('Registration Info');
             logger.log('-'.repeat(50));
             logger.log(`Domain:       ${displayName}`);
             logger.log(`Status:       Available`);
             logger.log(`Price:        ${formatSats(price)}`);
-            if (name.length === 3) {
-                logger.log(`Pricing tier: Premium (3-character)`);
-            } else if (name.length === 4) {
-                logger.log(`Pricing tier: Premium (4-character)`);
-            } else {
-                logger.log(`Pricing tier: Standard`);
-            }
+            logger.log(`Pricing tier: ${pricingTier.tier}`);
+            logger.log(`              ${pricingTier.description}`);
             logger.log('');
             logger.info('Register with:');
             logger.log(`  opnet domain register ${name} -n ${network}`);
@@ -303,9 +350,13 @@ async function domainInfo(domain: string, options: DomainInfoOptions): Promise<v
             if (contenthash.hashString) {
                 logger.log(`Value:        ${contenthash.hashString}`);
                 if (contenthash.hashType === 1 || contenthash.hashType === 2) {
-                    logger.log(`Gateway URL:  https://ipfs.opnet.org/ipfs/${contenthash.hashString}`);
+                    logger.log(
+                        `Gateway URL:  https://ipfs.opnet.org/ipfs/${contenthash.hashString}`,
+                    );
                 } else if (contenthash.hashType === 3) {
-                    logger.log(`Gateway URL:  https://ipfs.opnet.org/ipns/${contenthash.hashString}`);
+                    logger.log(
+                        `Gateway URL:  https://ipfs.opnet.org/ipns/${contenthash.hashString}`,
+                    );
                 }
             } else {
                 // SHA256 hash
@@ -328,8 +379,7 @@ async function domainInfo(domain: string, options: DomainInfoOptions): Promise<v
 }
 
 // Create the domain command with subcommands
-const domainCommand = new Command('domain')
-    .description('Manage .btc domains');
+const domainCommand = new Command('domain').description('Manage .btc domains');
 
 // Register subcommand
 domainCommand

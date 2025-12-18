@@ -59,6 +59,28 @@ export const BTC_RESOLVER_ABI: BitcoinInterfaceAbi = [
         inputs: [{ name: 'domainName', type: ABIDataTypes.STRING }],
         outputs: [],
     },
+    {
+        name: 'transferDomain',
+        type: BitcoinAbiTypes.Function,
+        inputs: [
+            { name: 'domainName', type: ABIDataTypes.STRING },
+            { name: 'newOwner', type: ABIDataTypes.ADDRESS },
+        ],
+        outputs: [],
+    },
+    {
+        name: 'transferDomainBySignature',
+        type: BitcoinAbiTypes.Function,
+        inputs: [
+            { name: 'ownerAddress', type: ABIDataTypes.BYTES32 },
+            { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
+            { name: 'domainName', type: ABIDataTypes.STRING },
+            { name: 'newOwner', type: ABIDataTypes.ADDRESS },
+            { name: 'deadline', type: ABIDataTypes.UINT64 },
+            { name: 'signature', type: ABIDataTypes.BYTES },
+        ],
+        outputs: [],
+    },
 
     // =========================================================================
     // SUBDOMAIN METHODS

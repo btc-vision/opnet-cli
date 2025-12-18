@@ -11,17 +11,17 @@ import { BaseCommand } from './BaseCommand.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import {
-    getResolverContract,
-    getDomain,
-    getSubdomain,
-    getContenthash,
     detectContenthashType,
+    getContenthash,
+    getContenthashTypeName,
+    getDomain,
+    getResolverContract,
+    getSubdomain,
+    isSubdomain,
+    parseDomainName,
     validateCIDv0,
     validateCIDv1,
     validateIPNS,
-    getContenthashTypeName,
-    isSubdomain,
-    parseDomainName,
 } from '../lib/resolver.js';
 import {
     buildTransactionParams,
@@ -274,7 +274,7 @@ export class WebsitePublishCommand extends BaseCommand {
             }
 
             if (result.estimatedGas) {
-                this.logger.info(`Estimated gas: ${result.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${result.estimatedGas} gas`);
             }
 
             const receipt = await result.sendTransaction(txParams);

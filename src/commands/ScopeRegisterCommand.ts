@@ -133,7 +133,7 @@ export class ScopeRegisterCommand extends BaseCommand {
             }
 
             if (registerResult.estimatedGas) {
-                this.logger.info(`Estimated gas: ${registerResult.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${registerResult.estimatedGas} gas`);
             }
 
             const receipt = await registerResult.sendTransaction(txParams);
@@ -146,9 +146,7 @@ export class ScopeRegisterCommand extends BaseCommand {
             this.logger.log(`Transaction ID: ${receipt.transactionId}`);
             this.logger.log(`Fees paid:      ${formatSats(receipt.estimatedFees)}`);
             this.logger.log('');
-            this.logger.info(
-                'You can now publish packages under this scope using: opnet publish',
-            );
+            this.logger.info('You can now publish packages under this scope using: opnet publish');
             this.logger.log('');
         } catch (error) {
             this.logger.fail('Scope registration failed');

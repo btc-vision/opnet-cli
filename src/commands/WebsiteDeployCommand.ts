@@ -12,14 +12,14 @@ import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
-import { uploadDirectory, uploadFile, DirectoryPinResult, PinResult } from '../lib/ipfs.js';
+import { DirectoryPinResult, PinResult, uploadDirectory, uploadFile } from '../lib/ipfs.js';
 import { formatFileSize } from '../lib/binary.js';
 import {
-    getResolverContract,
-    getDomain,
-    getSubdomain,
     getContenthash,
     getContenthashTypeName,
+    getDomain,
+    getResolverContract,
+    getSubdomain,
     isSubdomain,
     parseDomainName,
 } from '../lib/resolver.js';
@@ -33,7 +33,6 @@ import {
     waitForTransactionConfirmation,
 } from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
-import { CONTENTHASH_TYPE_CIDv1 } from '../types/BtcResolver.js';
 
 interface WebsiteDeployOptions {
     network: string;
@@ -51,7 +50,7 @@ export class WebsiteDeployCommand extends BaseCommand {
             .argument('<domain>', 'Domain name (e.g., mysite or mysite.btc)')
             .argument('<path>', 'Path to website directory or HTML file')
             .option('-n, --network <network>', 'Network to use', 'mainnet')
-            .option('--dry-run', 'Upload to IPFS but don\'t update on-chain')
+            .option('--dry-run', "Upload to IPFS but don't update on-chain")
             .option('-y, --yes', 'Skip confirmation prompts')
             .action((domain: string, websitePath: string, options?: WebsiteDeployOptions) =>
                 this.execute(domain, websitePath, options || { network: 'mainnet' }),
@@ -186,7 +185,9 @@ export class WebsiteDeployCommand extends BaseCommand {
             if (isDirectory) {
                 const result: DirectoryPinResult = await uploadDirectory(resolvedPath);
                 cid = result.cid;
-                this.logger.success(`Uploaded ${result.files} files (${formatFileSize(result.totalSize)})`);
+                this.logger.success(
+                    `Uploaded ${result.files} files (${formatFileSize(result.totalSize)})`,
+                );
             } else {
                 const result: PinResult = await uploadFile(resolvedPath);
                 cid = result.cid;
@@ -226,7 +227,7 @@ export class WebsiteDeployCommand extends BaseCommand {
             }
 
             if (result.estimatedGas) {
-                this.logger.info(`Estimated gas: ${result.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${result.estimatedGas} gas`);
             }
 
             const receipt = await result.sendTransaction(txParams);

@@ -335,8 +335,8 @@ export function detectContenthashType(content: string): number | null {
  * @returns Error message or null if valid
  */
 export function validateDomainName(domain: string): string | null {
-    if (domain.length < 3) {
-        return 'Domain must be at least 3 characters';
+    if (domain.length < 1) {
+        return 'Domain must be at least 1 character';
     }
     if (domain.length > 63) {
         return 'Domain must be at most 63 characters';

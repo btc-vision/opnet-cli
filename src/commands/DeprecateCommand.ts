@@ -165,7 +165,7 @@ export class DeprecateCommand extends BaseCommand {
             }
 
             if (deprecateResult.estimatedGas) {
-                this.logger.info(`Estimated gas: ${deprecateResult.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${deprecateResult.estimatedGas} gas`);
             }
 
             const receipt = await deprecateResult.sendTransaction(txParams);

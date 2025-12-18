@@ -170,7 +170,7 @@ export class TransferCommand extends BaseCommand {
                 }
 
                 if (transferResult.estimatedGas) {
-                    this.logger.info(`Estimated gas: ${transferResult.estimatedGas} sats`);
+                    this.logger.info(`Estimated gas: ${transferResult.estimatedGas} gas`);
                 }
 
                 const receipt = await transferResult.sendTransaction(txParams);
@@ -196,7 +196,7 @@ export class TransferCommand extends BaseCommand {
                 }
 
                 if (transferResult.estimatedGas) {
-                    this.logger.info(`Estimated gas: ${transferResult.estimatedGas} sats`);
+                    this.logger.info(`Estimated gas: ${transferResult.estimatedGas} gas`);
                 }
 
                 const receipt = await transferResult.sendTransaction(txParams);
@@ -287,7 +287,7 @@ export class TransferCommand extends BaseCommand {
             }
 
             if (cancelResult.estimatedGas) {
-                this.logger.info(`Estimated gas: ${cancelResult.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${cancelResult.estimatedGas} gas`);
             }
 
             const receipt = await cancelResult.sendTransaction(txParams);
@@ -344,7 +344,7 @@ export class TransferCommand extends BaseCommand {
             }
 
             if (cancelResult.estimatedGas) {
-                this.logger.info(`Estimated gas: ${cancelResult.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${cancelResult.estimatedGas} gas`);
             }
 
             const receipt = await cancelResult.sendTransaction(txParams);

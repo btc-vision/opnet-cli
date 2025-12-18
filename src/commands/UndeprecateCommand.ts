@@ -6,7 +6,12 @@
 
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import { getPackage, getRegistryContract, getVersion, isVersionImmutable } from '../lib/registry.js';
+import {
+    getPackage,
+    getRegistryContract,
+    getVersion,
+    isVersionImmutable,
+} from '../lib/registry.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
 import {
@@ -140,7 +145,7 @@ export class UndeprecateCommand extends BaseCommand {
             }
 
             if (undeprecateResult.estimatedGas) {
-                this.logger.info(`Estimated gas: ${undeprecateResult.estimatedGas} sats`);
+                this.logger.info(`Estimated gas: ${undeprecateResult.estimatedGas} gas`);
             }
 
             const receipt = await undeprecateResult.sendTransaction(txParams);
