@@ -40,7 +40,7 @@ export const DEFAULT_CONFIG: CLIConfig = {
     resolverAddresses: {
         mainnet: '', // TODO: Set once deployed
         testnet: '', // TODO: Set once deployed
-        regtest: '0x84da2929ee0e5f4ac84d6910150b9ede78f912847496f8689ffad16c6e44cbbe',
+        regtest: '0x69e1d910686c7e3d5d44b29f6d5aa4afc4bcbd65a5d8e8a6bf601b209f0c4781',
     },
     defaultMldsaLevel: 44,
     indexerUrl: 'https://indexer.opnet.org',
