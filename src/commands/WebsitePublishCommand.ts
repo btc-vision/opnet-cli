@@ -11,17 +11,17 @@ import { BaseCommand } from './BaseCommand.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import {
-    detectContenthashType,
-    getContenthash,
-    getContenthashTypeName,
-    getDomain,
     getResolverContract,
+    getDomain,
     getSubdomain,
-    isSubdomain,
-    parseDomainName,
+    getContenthash,
+    detectContenthashType,
     validateCIDv0,
     validateCIDv1,
     validateIPNS,
+    getContenthashTypeName,
+    isSubdomain,
+    parseDomainName,
 } from '../lib/resolver.js';
 import {
     buildTransactionParams,
@@ -33,6 +33,7 @@ import {
     waitForTransactionConfirmation,
 } from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
+import { getNetwork } from '../lib/wallet.js';
 import {
     CONTENTHASH_TYPE_CIDv0,
     CONTENTHASH_TYPE_CIDv1,
@@ -155,8 +156,8 @@ export class WebsitePublishCommand extends BaseCommand {
 
             // Check domain/subdomain ownership
             this.logger.info('Checking domain ownership...');
-
             let ownerAddress: string;
+
             if (isSubdomainName) {
                 const subdomainInfo = await getSubdomain(name, network);
                 if (!subdomainInfo) {
@@ -178,8 +179,7 @@ export class WebsitePublishCommand extends BaseCommand {
             if (wallet.address.toHex() !== ownerAddress) {
                 this.logger.fail('You are not the owner of this domain');
                 this.logger.log(`Domain owner: ${ownerAddress}`);
-                this.logger.log(`Your address: ${wallet.p2trAddress}`);
-                this.logger.log(`MLDSA Public Key Hash:  ${wallet.address.toHex()}`);
+                this.logger.log(`Your address: ${wallet.address.toHex()}`);
                 process.exit(1);
             }
             this.logger.success('Ownership verified');

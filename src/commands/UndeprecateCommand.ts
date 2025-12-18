@@ -6,12 +6,7 @@
 
 import { confirm } from '@inquirer/prompts';
 import { BaseCommand } from './BaseCommand.js';
-import {
-    getPackage,
-    getRegistryContract,
-    getVersion,
-    isVersionImmutable,
-} from '../lib/registry.js';
+import { getPackage, getRegistryContract, getVersion, isVersionImmutable } from '../lib/registry.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
 import {

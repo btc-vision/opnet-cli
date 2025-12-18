@@ -12,11 +12,11 @@ import { Address } from '@btc-vision/transaction';
 
 import { NetworkName } from '../types/index.js';
 import {
+    IBtcResolver,
     CONTENTHASH_TYPE_CIDv0,
     CONTENTHASH_TYPE_CIDv1,
     CONTENTHASH_TYPE_IPNS,
     CONTENTHASH_TYPE_SHA256,
-    IBtcResolver,
 } from '../types/BtcResolver.js';
 import { getProvider } from './provider.js';
 import { getNetwork } from './wallet.js';

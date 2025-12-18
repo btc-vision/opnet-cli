@@ -9,17 +9,17 @@
 import { Command } from 'commander';
 import { confirm } from '@inquirer/prompts';
 import { Logger } from '@btc-vision/logger';
-import { CLIWallet } from '../lib/wallet.js';
+import { CLIWallet, getNetwork } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import {
+    getResolverContract,
+    getDomain,
     getContenthash,
     getContenthashTypeName,
-    getDomain,
-    getDomainPrice,
-    getResolverContract,
-    getTreasuryAddress,
-    parseDomainName,
     validateDomainName,
+    getTreasuryAddress,
+    getDomainPrice,
+    parseDomainName,
 } from '../lib/resolver.js';
 import {
     buildTransactionParams,
@@ -49,7 +49,10 @@ interface DomainInfoOptions {
 /**
  * Register a new .btc domain
  */
-async function registerDomain(domain: string, options: DomainRegisterOptions): Promise<void> {
+async function registerDomain(
+    domain: string,
+    options: DomainRegisterOptions,
+): Promise<void> {
     try {
         const network = (options.network || 'mainnet') as NetworkName;
 
@@ -127,7 +130,6 @@ async function registerDomain(domain: string, options: DomainRegisterOptions): P
         logger.log(`Treasury:     ${treasuryAddr}`);
         logger.log(`Network:      ${network}`);
         logger.log(`Your wallet:  ${wallet.p2trAddress}`);
-        logger.log(`MLDSA Public Key Hash:  ${wallet.address.toHex()}`);
         logger.log('');
 
         if (options.dryRun) {
@@ -301,13 +303,9 @@ async function domainInfo(domain: string, options: DomainInfoOptions): Promise<v
             if (contenthash.hashString) {
                 logger.log(`Value:        ${contenthash.hashString}`);
                 if (contenthash.hashType === 1 || contenthash.hashType === 2) {
-                    logger.log(
-                        `Gateway URL:  https://ipfs.opnet.org/ipfs/${contenthash.hashString}`,
-                    );
+                    logger.log(`Gateway URL:  https://ipfs.opnet.org/ipfs/${contenthash.hashString}`);
                 } else if (contenthash.hashType === 3) {
-                    logger.log(
-                        `Gateway URL:  https://ipfs.opnet.org/ipns/${contenthash.hashString}`,
-                    );
+                    logger.log(`Gateway URL:  https://ipfs.opnet.org/ipns/${contenthash.hashString}`);
                 }
             } else {
                 // SHA256 hash
@@ -330,7 +328,8 @@ async function domainInfo(domain: string, options: DomainInfoOptions): Promise<v
 }
 
 // Create the domain command with subcommands
-const domainCommand = new Command('domain').description('Manage .btc domains');
+const domainCommand = new Command('domain')
+    .description('Manage .btc domains');
 
 // Register subcommand
 domainCommand

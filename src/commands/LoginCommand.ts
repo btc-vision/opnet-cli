@@ -110,12 +110,11 @@ export class LoginCommand extends BaseCommand {
             };
         }
 
-        return this.interactiveLogin(options.network, mldsaLevel);
+        return this.interactiveLogin(options.network);
     }
 
     private async interactiveLogin(
         defaultNetwork: NetworkName,
-        defaultLevel: CLIMldsaLevel,
     ): Promise<CLICredentials> {
         this.logger.info('OPNet Wallet Configuration\n');
 
@@ -145,27 +144,9 @@ export class LoginCommand extends BaseCommand {
             default: defaultNetwork,
         })) as NetworkName;
 
-        const selectedLevel = (await select({
-            message: 'Select MLDSA security level:',
-            choices: [
-                {
-                    name: 'MLDSA-44 (Level 2, fastest)',
-                    value: 44,
-                    description: '1312 byte public key',
-                },
-                {
-                    name: 'MLDSA-65 (Level 3, balanced)',
-                    value: 65,
-                    description: '1952 byte public key',
-                },
-                {
-                    name: 'MLDSA-87 (Level 5, most secure)',
-                    value: 87,
-                    description: '2592 byte public key',
-                },
-            ],
-            default: defaultLevel,
-        })) as CLIMldsaLevel;
+        // OPNet currently only supports MLDSA-44
+        const selectedLevel: CLIMldsaLevel = 44;
+        this.logger.info('Using MLDSA-44 (only supported level on OPNet)');
 
         if (loginMethod === 'mnemonic') {
             const mnemonic = await password({

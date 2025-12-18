@@ -78,13 +78,18 @@ async function httpRequest(
         const req = lib.request(reqOptions, (res) => {
             const statusCode = res.statusCode ?? 0;
 
-            if (followRedirect && statusCode >= 300 && statusCode < 400 && res.headers.location) {
-                const redirectUrl = new URL(res.headers.location, url).href;
-                res.resume();
-                httpRequest(redirectUrl, options, redirectCount + 1)
-                    .then(resolve)
-                    .catch(reject);
-                return;
+            // Handle redirects - check for location header (case-insensitive)
+            if (followRedirect && statusCode >= 300 && statusCode < 400) {
+                const locationHeader = res.headers.location || res.headers['Location'];
+                const location = Array.isArray(locationHeader) ? locationHeader[0] : locationHeader;
+                if (location) {
+                    const redirectUrl = new URL(location, url).href;
+                    res.resume();
+                    httpRequest(redirectUrl, options, redirectCount + 1)
+                        .then(resolve)
+                        .catch(reject);
+                    return;
+                }
             }
 
             const chunks: Buffer[] = [];
@@ -95,6 +100,19 @@ async function httpRequest(
 
             res.on('end', () => {
                 const body = Buffer.concat(chunks);
+
+                // For redirects without Location header, try to extract from HTML body
+                if (followRedirect && statusCode >= 300 && statusCode < 400) {
+                    const bodyStr = body.toString();
+                    const hrefMatch = bodyStr.match(/href="([^"]+)"/);
+                    if (hrefMatch && hrefMatch[1]) {
+                        const redirectUrl = new URL(hrefMatch[1], url).href;
+                        httpRequest(redirectUrl, options, redirectCount + 1)
+                            .then(resolve)
+                            .catch(reject);
+                        return;
+                    }
+                }
 
                 if (statusCode >= 200 && statusCode < 300) {
                     resolve(body);
@@ -542,9 +560,7 @@ export async function uploadDirectory(
             totalSize,
         };
     } catch (e) {
-        throw new Error(
-            `IPFS directory upload failed: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        throw new Error(`IPFS directory upload failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 }
 

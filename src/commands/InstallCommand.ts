@@ -151,8 +151,12 @@ export class InstallCommand extends BaseCommand {
             const outputDir = options?.output || path.join(process.cwd(), 'plugins');
             fs.mkdirSync(outputDir, { recursive: true });
 
-            const fileName = `${packageName.replace(/^@/, '').replace(/\//g, '-')}-${version}.opnet`;
+            const packageBaseName = packageName.replace(/^@/, '').replace(/\//g, '-');
+            const fileName = `${packageBaseName}-${version}.opnet`;
             const outputPath = path.join(outputDir, fileName);
+
+            // Check for and remove older versions of this plugin
+            this.removeOldVersions(outputDir, packageBaseName, version);
 
             // Save file
             this.logger.info('Saving plugin...');
@@ -173,6 +177,48 @@ export class InstallCommand extends BaseCommand {
             this.logger.fail('Installation failed');
             this.exitWithError(this.formatError(error));
         }
+    }
+
+    /**
+     * Remove older versions of a plugin from the output directory
+     * Only removes .opnet files, preserves config folders
+     */
+    private removeOldVersions(outputDir: string, packageBaseName: string, newVersion: string): void {
+        try {
+            const entries = fs.readdirSync(outputDir, { withFileTypes: true });
+
+            for (const entry of entries) {
+                // Only process .opnet files, skip directories (config folders)
+                if (!entry.isFile() || !entry.name.endsWith('.opnet')) {
+                    continue;
+                }
+
+                // Check if this file belongs to the same package
+                // Pattern: packageBaseName-version.opnet
+                const pattern = new RegExp(`^${this.escapeRegex(packageBaseName)}-(.+)\\.opnet$`);
+                const match = entry.name.match(pattern);
+
+                if (match) {
+                    const oldVersion = match[1];
+                    // Don't delete if it's the same version we're installing
+                    if (oldVersion !== newVersion) {
+                        const oldFilePath = path.join(outputDir, entry.name);
+                        this.logger.info(`Removing old version: ${entry.name}`);
+                        fs.unlinkSync(oldFilePath);
+                    }
+                }
+            }
+        } catch (error) {
+            // Non-fatal: if we can't clean up old versions, just continue
+            this.logger.warn(`Could not clean up old versions: ${this.formatError(error)}`);
+        }
+    }
+
+    /**
+     * Escape special regex characters in a string
+     */
+    private escapeRegex(str: string): string {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 }
 

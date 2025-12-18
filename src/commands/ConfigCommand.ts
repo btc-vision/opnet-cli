@@ -8,13 +8,7 @@ import { Command } from 'commander';
 import * as os from 'os';
 import * as path from 'path';
 import { BaseCommand } from './BaseCommand.js';
-import {
-    DEFAULT_CONFIG,
-    displayConfig,
-    getConfigValue,
-    saveConfig,
-    setConfigValue,
-} from '../lib/config.js';
+import { DEFAULT_CONFIG, displayConfig, getConfigValue, saveConfig, setConfigValue, } from '../lib/config.js';
 
 export class ConfigCommand extends BaseCommand {
     constructor() {
