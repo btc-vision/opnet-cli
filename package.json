@@ -57,7 +57,7 @@
         "@inquirer/prompts": "^8.1.0",
         "bytenode": "^1.5.7",
         "commander": "^14.0.0",
-        "ecpair": "^2.1.0",
+        "ecpair": "^3.0.0",
         "esbuild": "^0.27.1",
         "opnet": "^1.7.18",
         "ora": "^9.0.0"
