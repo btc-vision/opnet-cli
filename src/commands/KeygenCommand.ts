@@ -8,6 +8,7 @@ import { Command } from 'commander';
 import * as fs from 'fs';
 import { BaseCommand } from './BaseCommand.js';
 import { computePublicKeyHash, generateMLDSAKeypair, generateMnemonic } from '../lib/wallet.js';
+import { toHex } from '../lib/binary.js';
 import { isValidMldsaLevel } from '../lib/credentials.js';
 
 export class KeygenCommand extends BaseCommand {
@@ -84,10 +85,10 @@ export class KeygenCommand extends BaseCommand {
                 const privateKeyPath = `${options.output}.private.key`;
                 const publicKeyPath = `${options.output}.public.key`;
 
-                fs.writeFileSync(privateKeyPath, keypair.privateKey.toString('hex') + '\n', {
+                fs.writeFileSync(privateKeyPath, toHex(keypair.privateKey) + '\n', {
                     mode: 0o600,
                 });
-                fs.writeFileSync(publicKeyPath, keypair.publicKey.toString('hex') + '\n', {
+                fs.writeFileSync(publicKeyPath, toHex(keypair.publicKey) + '\n', {
                     mode: 0o644,
                 });
 
@@ -101,8 +102,8 @@ export class KeygenCommand extends BaseCommand {
             } else if (options.json) {
                 const output = {
                     level: levelNum,
-                    privateKey: keypair.privateKey.toString('hex'),
-                    publicKey: keypair.publicKey.toString('hex'),
+                    privateKey: toHex(keypair.privateKey),
+                    publicKey: toHex(keypair.publicKey),
                     publicKeyHash,
                     privateKeySize: keypair.privateKey.length,
                     publicKeySize: keypair.publicKey.length,
@@ -115,10 +116,10 @@ export class KeygenCommand extends BaseCommand {
                 this.logger.log(`Private Key Size: ${keypair.privateKey.length} bytes`);
                 this.logger.log('');
                 this.logger.log('Public Key (hex):');
-                this.logger.log(keypair.publicKey.toString('hex'));
+                this.logger.log(toHex(keypair.publicKey));
                 this.logger.log('');
                 this.logger.log('Private Key (hex):');
-                this.logger.log(keypair.privateKey.toString('hex'));
+                this.logger.log(toHex(keypair.privateKey));
                 this.logger.log('');
                 this.logger.warn('IMPORTANT: Store the private key securely!');
                 this.logger.warn('Use --output <prefix> to save to files.');

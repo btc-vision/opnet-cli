@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { BaseCommand } from './BaseCommand.js';
-import { formatFileSize, parseOpnetBinary, verifyChecksum } from '../lib/binary.js';
+import { formatFileSize, parseOpnetBinary, toHex, verifyChecksum } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { CLIMldsaLevel } from '../types/index.js';
 
@@ -186,7 +186,7 @@ export class VerifyCommand extends BaseCommand {
                 this.logger.log('');
 
                 this.logger.log('Checksums:');
-                this.logger.log(`  Stored:         ${parsed.checksum.toString('hex')}`);
+                this.logger.log(`  Stored:         ${toHex(parsed.checksum)}`);
                 this.logger.log('');
 
                 this.logger.log('Author:');

@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { BaseCommand } from './BaseCommand.js';
-import { buildOpnetBinary, formatFileSize, parseOpnetBinary } from '../lib/binary.js';
+import { buildOpnetBinary, formatFileSize, parseOpnetBinary, toHex } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 
@@ -74,17 +74,17 @@ export class SignCommand extends BaseCommand {
 
             // Rebuild binary with signing
             this.logger.info('Signing and rebuilding binary...');
-            const signFn = (checksum: Buffer) => wallet.signMLDSA(checksum);
+            const signFn = (checksum: Uint8Array) => wallet.signMLDSA(checksum);
             const { binary: newBinary, checksum } = buildOpnetBinary({
                 mldsaLevel: wallet.securityLevel,
                 publicKey: wallet.mldsaPublicKey,
                 metadata: parsed.metadata,
                 bytecode: parsed.bytecode,
-                proto: parsed.proto ?? Buffer.alloc(0),
+                proto: parsed.proto,
                 signFn,
             });
             this.logger.success(
-                `Signed (checksum: sha256:${checksum.toString('hex').substring(0, 16)}...)`,
+                `Signed (checksum: sha256:${toHex(checksum).substring(0, 16)}...)`,
             );
             this.logger.success(`Binary rebuilt (${formatFileSize(newBinary.length)})`);
 

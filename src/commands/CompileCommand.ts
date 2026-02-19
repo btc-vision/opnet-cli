@@ -10,7 +10,7 @@ import * as esbuild from 'esbuild';
 import bytenode from 'bytenode';
 import { BaseCommand } from './BaseCommand.js';
 import { getManifestPath, loadManifest } from '../lib/manifest.js';
-import { buildOpnetBinary, formatFileSize } from '../lib/binary.js';
+import { buildOpnetBinary, formatFileSize, toHex } from '../lib/binary.js';
 import { CLIWallet } from '../lib/wallet.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import { CLIMldsaLevel } from '../types/index.js';
@@ -96,7 +96,7 @@ export class CompileCommand extends BaseCommand {
             this.logger.success(`V8 bytecode generated (${formatFileSize(bytecode.length)})`);
 
             // Check for proto file
-            let proto = Buffer.alloc(0);
+            let proto: Uint8Array = new Uint8Array(0);
             const protoPath = path.join(projectDir, 'plugin.proto');
             if (fs.existsSync(protoPath)) {
                 proto = fs.readFileSync(protoPath);
@@ -104,9 +104,9 @@ export class CompileCommand extends BaseCommand {
             }
 
             // Prepare signing
-            let publicKey: Buffer;
+            let publicKey: Uint8Array;
             let mldsaLevel: CLIMldsaLevel;
-            let signFn: ((checksum: Buffer) => Buffer) | undefined;
+            let signFn: ((checksum: Uint8Array) => Uint8Array) | undefined;
 
             if (options.sign) {
                 this.logger.info('Loading wallet for signing...');
@@ -126,12 +126,12 @@ export class CompileCommand extends BaseCommand {
                 this.logger.success(`Wallet loaded (MLDSA-${mldsaLevel})`);
 
                 // Create signing function that will be called with the final checksum
-                signFn = (checksum: Buffer) => wallet.signMLDSA(checksum);
+                signFn = (checksum: Uint8Array) => wallet.signMLDSA(checksum);
             } else {
                 this.logger.warn('Skipping signing (--no-sign)');
                 // Use dummy values for unsigned binary
                 mldsaLevel = 44;
-                publicKey = Buffer.alloc(1312); // MLDSA-44 public key size
+                publicKey = new Uint8Array(1312); // MLDSA-44 public key size
             }
 
             // Build .opnet binary
@@ -147,7 +147,7 @@ export class CompileCommand extends BaseCommand {
 
             if (options.sign) {
                 this.logger.success(
-                    `Plugin signed (checksum: sha256:${checksum.toString('hex').substring(0, 16)}...)`,
+                    `Plugin signed (checksum: sha256:${toHex(checksum).substring(0, 16)}...)`,
                 );
             }
             this.logger.success(`Binary assembled (${formatFileSize(binary.length)})`);
@@ -176,7 +176,7 @@ export class CompileCommand extends BaseCommand {
             this.logger.log(`Plugin:       ${manifest.name}@${manifest.version}`);
             this.logger.log(`Type:         ${manifest.pluginType}`);
             this.logger.log(`MLDSA Level:  ${mldsaLevel}`);
-            this.logger.log(`Checksum:     sha256:${checksum.toString('hex')}`);
+            this.logger.log(`Checksum:     sha256:${toHex(checksum)}`);
             this.logger.log(`Signed:       ${options.sign ? 'Yes' : 'No'}`);
             this.logger.log('');
 

@@ -19,6 +19,19 @@ import {
 
 import { cliLevelToMLDSALevel, CLIMldsaLevel, mldsaLevelToCLI } from '../types/index.js';
 
+const HEX_CHARS = '0123456789abcdef';
+
+/**
+ * Convert a Uint8Array to a hex string
+ */
+export function toHex(data: Uint8Array): string {
+    let hex = '';
+    for (let i = 0; i < data.length; i++) {
+        hex += HEX_CHARS[data[i] >> 4] + HEX_CHARS[data[i] & 0xf];
+    }
+    return hex;
+}
+
 /**
  * Parse a .opnet binary file
  *
@@ -26,7 +39,8 @@ import { cliLevelToMLDSALevel, CLIMldsaLevel, mldsaLevelToCLI } from '../types/i
  * @returns Parsed binary structure
  * @throws Error if the binary is malformed
  */
-export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
+export function parseOpnetBinary(data: Uint8Array): IParsedPluginFile {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let offset = 0;
 
     // Check minimum size
@@ -38,14 +52,14 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     const magic = data.subarray(offset, offset + 8);
     offset += 8;
 
-    if (!magic.equals(PLUGIN_MAGIC_BYTES)) {
+    if (!PLUGIN_MAGIC_BYTES.every((b, i) => magic[i] === b)) {
         throw new Error(
-            `Invalid magic bytes: expected ${PLUGIN_MAGIC_BYTES.toString('hex')}, got ${magic.toString('hex')}`,
+            `Invalid magic bytes: expected ${toHex(PLUGIN_MAGIC_BYTES)}, got ${toHex(magic)}`,
         );
     }
 
     // Format version (uint32 LE)
-    const formatVersion = data.readUInt32LE(offset);
+    const formatVersion = view.getUint32(offset, true);
     offset += 4;
 
     if (formatVersion !== PLUGIN_FORMAT_VERSION) {
@@ -55,7 +69,7 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     }
 
     // MLDSA level (uint8)
-    const mldsaLevelValue = data.readUInt8(offset);
+    const mldsaLevelValue = view.getUint8(offset);
     offset += 1;
 
     if (mldsaLevelValue > 2) {
@@ -75,15 +89,15 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     }
 
     // Public key
-    const publicKey = Buffer.from(data.subarray(offset, offset + publicKeySize));
+    const publicKey = data.slice(offset, offset + publicKeySize);
     offset += publicKeySize;
 
     // Signature
-    const signature = Buffer.from(data.subarray(offset, offset + signatureSize));
+    const signature = data.slice(offset, offset + signatureSize);
     offset += signatureSize;
 
     // Metadata length (uint32 LE)
-    const metadataLength = data.readUInt32LE(offset);
+    const metadataLength = view.getUint32(offset, true);
     offset += 4;
 
     if (offset + metadataLength > data.length) {
@@ -94,17 +108,18 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     const metadataBytes = data.subarray(offset, offset + metadataLength);
     offset += metadataLength;
 
+    const decoder = new TextDecoder();
     let rawMetadata: string;
     let metadata: IPluginMetadata;
     try {
-        rawMetadata = metadataBytes.toString('utf-8');
+        rawMetadata = decoder.decode(metadataBytes);
         metadata = JSON.parse(rawMetadata) as IPluginMetadata;
     } catch {
         throw new Error('Malformed JSON metadata');
     }
 
     // Bytecode length (uint32 LE)
-    const bytecodeLength = data.readUInt32LE(offset);
+    const bytecodeLength = view.getUint32(offset, true);
     offset += 4;
 
     if (offset + bytecodeLength > data.length) {
@@ -112,11 +127,11 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
     }
 
     // Bytecode
-    const bytecode = Buffer.from(data.subarray(offset, offset + bytecodeLength));
+    const bytecode = data.slice(offset, offset + bytecodeLength);
     offset += bytecodeLength;
 
     // Proto length (uint32 LE)
-    const protoLength = data.readUInt32LE(offset);
+    const protoLength = view.getUint32(offset, true);
     offset += 4;
 
     if (offset + protoLength > data.length) {
@@ -125,7 +140,7 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
 
     // Proto
     const proto =
-        protoLength > 0 ? Buffer.from(data.subarray(offset, offset + protoLength)) : undefined;
+        protoLength > 0 ? data.slice(offset, offset + protoLength) : undefined;
     offset += protoLength;
 
     // Checksum (32 bytes)
@@ -133,7 +148,7 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
         throw new Error('Checksum truncated');
     }
 
-    const checksum = Buffer.from(data.subarray(offset, offset + 32));
+    const checksum = data.slice(offset, offset + 32);
 
     return {
         formatVersion,
@@ -156,7 +171,11 @@ export function parseOpnetBinary(data: Buffer): IParsedPluginFile {
  * @param proto - Proto bytes (can be empty)
  * @returns SHA-256 hash
  */
-export function computeChecksum(metadata: Buffer, bytecode: Buffer, proto: Buffer): Buffer {
+export function computeChecksum(
+    metadata: Uint8Array,
+    bytecode: Uint8Array,
+    proto: Uint8Array,
+): Uint8Array {
     const hash = crypto.createHash('sha256');
     hash.update(metadata);
     hash.update(bytecode);
@@ -171,13 +190,17 @@ export function computeChecksum(metadata: Buffer, bytecode: Buffer, proto: Buffe
  * @returns True if checksum matches
  */
 export function verifyChecksum(parsed: IParsedPluginFile): boolean {
-    const metadataBytes = Buffer.from(parsed.rawMetadata, 'utf-8');
+    const encoder = new TextEncoder();
+    const metadataBytes = encoder.encode(parsed.rawMetadata);
     const computed = computeChecksum(
         metadataBytes,
         parsed.bytecode,
-        parsed.proto ?? Buffer.alloc(0),
+        parsed.proto ?? new Uint8Array(0),
     );
-    return computed.equals(parsed.checksum);
+    if (computed.length !== parsed.checksum.length) {
+        return false;
+    }
+    return crypto.timingSafeEqual(computed, parsed.checksum);
 }
 
 /**
@@ -188,13 +211,20 @@ export function verifyChecksum(parsed: IParsedPluginFile): boolean {
  */
 export function buildOpnetBinary(options: {
     mldsaLevel: CLIMldsaLevel;
-    publicKey: Buffer;
+    publicKey: Uint8Array;
     metadata: IPluginMetadata;
-    bytecode: Buffer;
-    proto?: Buffer;
-    signFn?: (checksum: Buffer) => Buffer;
-}): { binary: Buffer; checksum: Buffer } {
-    const { mldsaLevel, publicKey, metadata, bytecode, proto = Buffer.alloc(0), signFn } = options;
+    bytecode: Uint8Array;
+    proto?: Uint8Array;
+    signFn?: (checksum: Uint8Array) => Uint8Array;
+}): { binary: Uint8Array; checksum: Uint8Array } {
+    const {
+        mldsaLevel,
+        publicKey,
+        metadata,
+        bytecode,
+        proto = new Uint8Array(0),
+        signFn,
+    } = options;
 
     const sdkLevel = cliLevelToMLDSALevel(mldsaLevel);
 
@@ -208,21 +238,23 @@ export function buildOpnetBinary(options: {
         );
     }
 
+    const encoder = new TextEncoder();
+
     // First pass: compute checksum without the checksum field set
     const tempMetadata = { ...metadata, checksum: '' };
-    const tempMetadataBytes = Buffer.from(JSON.stringify(tempMetadata), 'utf-8');
+    const tempMetadataBytes = encoder.encode(JSON.stringify(tempMetadata));
     const checksum = computeChecksum(tempMetadataBytes, bytecode, proto);
-    const checksumHex = `sha256:${checksum.toString('hex')}`;
+    const checksumHex = `sha256:${toHex(checksum)}`;
 
     // Second pass: serialize metadata with checksum included
     const finalMetadata = { ...metadata, checksum: checksumHex };
-    const metadataBytes = Buffer.from(JSON.stringify(finalMetadata), 'utf-8');
+    const metadataBytes = encoder.encode(JSON.stringify(finalMetadata));
 
     // Recompute checksum with the final metadata (includes checksum field)
     const finalChecksum = computeChecksum(metadataBytes, bytecode, proto);
 
     // Sign the final checksum (this is what gets verified)
-    const signature = signFn ? signFn(finalChecksum) : Buffer.alloc(expectedSigSize);
+    const signature = signFn ? signFn(finalChecksum) : new Uint8Array(expectedSigSize);
 
     if (signature.length !== expectedSigSize) {
         throw new Error(
@@ -246,55 +278,56 @@ export function buildOpnetBinary(options: {
         32; // checksum
 
     // Build buffer
-    const buffer = Buffer.alloc(totalSize);
+    const buffer = new Uint8Array(totalSize);
+    const view = new DataView(buffer.buffer);
     let offset = 0;
 
     // Magic bytes
-    PLUGIN_MAGIC_BYTES.copy(buffer, offset);
+    buffer.set(PLUGIN_MAGIC_BYTES, offset);
     offset += 8;
 
     // Format version
-    buffer.writeUInt32LE(PLUGIN_FORMAT_VERSION, offset);
+    view.setUint32(offset, PLUGIN_FORMAT_VERSION, true);
     offset += 4;
 
     // MLDSA level (enum value 0, 1, or 2)
-    buffer.writeUInt8(sdkLevel, offset);
+    view.setUint8(offset, sdkLevel);
     offset += 1;
 
     // Public key
-    publicKey.copy(buffer, offset);
+    buffer.set(publicKey, offset);
     offset += publicKey.length;
 
     // Signature
-    signature.copy(buffer, offset);
+    buffer.set(signature, offset);
     offset += signature.length;
 
     // Metadata length
-    buffer.writeUInt32LE(metadataBytes.length, offset);
+    view.setUint32(offset, metadataBytes.length, true);
     offset += 4;
 
     // Metadata
-    metadataBytes.copy(buffer, offset);
+    buffer.set(metadataBytes, offset);
     offset += metadataBytes.length;
 
     // Bytecode length
-    buffer.writeUInt32LE(bytecode.length, offset);
+    view.setUint32(offset, bytecode.length, true);
     offset += 4;
 
     // Bytecode
-    bytecode.copy(buffer, offset);
+    buffer.set(bytecode, offset);
     offset += bytecode.length;
 
     // Proto length
-    buffer.writeUInt32LE(proto.length, offset);
+    view.setUint32(offset, proto.length, true);
     offset += 4;
 
     // Proto
-    proto.copy(buffer, offset);
+    buffer.set(proto, offset);
     offset += proto.length;
 
     // Checksum (use finalChecksum which was computed with metadata containing checksum hex)
-    finalChecksum.copy(buffer, offset);
+    buffer.set(finalChecksum, offset);
 
     return { binary: buffer, checksum: finalChecksum };
 }
@@ -305,7 +338,7 @@ export function buildOpnetBinary(options: {
  * @param data - The binary file contents
  * @returns The parsed metadata or null if invalid
  */
-export function extractMetadata(data: Buffer): IPluginMetadata | null {
+export function extractMetadata(data: Uint8Array): IPluginMetadata | null {
     try {
         const parsed = parseOpnetBinary(data);
         return parsed.metadata;

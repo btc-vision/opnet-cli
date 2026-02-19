@@ -12,6 +12,7 @@ import {
     maskSensitive,
 } from '../lib/credentials.js';
 import { CLIWallet } from '../lib/wallet.js';
+import { toHex } from '../lib/binary.js';
 
 interface WhoamiOptions {
     verbose?: boolean;
@@ -63,7 +64,7 @@ export class WhoamiCommand extends BaseCommand {
                 if (options.publicKey) {
                     this.logger.log('');
                     this.logger.log('MLDSA Public Key:');
-                    this.logger.log(wallet.mldsaPublicKey.toString('hex'));
+                    this.logger.log(toHex(wallet.mldsaPublicKey));
                 }
 
                 if (options.verbose) {

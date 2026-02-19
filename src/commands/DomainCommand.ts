@@ -10,6 +10,7 @@ import { Command } from 'commander';
 import { confirm } from '@inquirer/prompts';
 import { Logger } from '@btc-vision/logger';
 import { CLIWallet } from '../lib/wallet.js';
+import { toHex } from '../lib/binary.js';
 import { canSign, loadCredentials } from '../lib/credentials.js';
 import {
     getContenthash,
@@ -360,7 +361,7 @@ async function domainInfo(domain: string, options: DomainInfoOptions): Promise<v
                 }
             } else {
                 // SHA256 hash
-                const hashHex = Buffer.from(contenthash.hashData).toString('hex');
+                const hashHex = toHex(new Uint8Array(contenthash.hashData));
                 logger.log(`Value:        ${hashHex}`);
             }
         } else {

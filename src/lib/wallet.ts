@@ -84,16 +84,15 @@ export class CLIWallet {
     /**
      * Get the MLDSA public key
      */
-    get mldsaPublicKey(): Buffer {
-        return Buffer.from(this.wallet.mldsaKeypair.publicKey);
+    get mldsaPublicKey(): Uint8Array {
+        return this.wallet.mldsaKeypair.publicKey;
     }
 
     /**
      * Get the MLDSA public key hash (SHA-256)
      */
     get mldsaPublicKeyHash(): string {
-        const hash = crypto.createHash('sha256').update(this.mldsaPublicKey).digest();
-        return hash.toString('hex');
+        return crypto.createHash('sha256').update(this.mldsaPublicKey).digest('hex');
     }
 
     /**
@@ -172,9 +171,9 @@ export class CLIWallet {
      * @returns True if the signature is valid
      */
     static verifyMLDSA(
-        data: Buffer,
-        signature: Buffer,
-        publicKey: Buffer,
+        data: Uint8Array,
+        signature: Uint8Array,
+        publicKey: Uint8Array,
         level: CLIMldsaLevel,
     ): boolean {
         const securityLevel = getMLDSASecurityLevel(level);
@@ -198,9 +197,9 @@ export class CLIWallet {
      * @param data - The data to sign (typically a SHA-256 hash)
      * @returns The MLDSA signature
      */
-    signMLDSA(data: Buffer): Buffer {
+    signMLDSA(data: Uint8Array): Uint8Array {
         const result = MessageSigner.signMLDSAMessage(this.wallet.mldsaKeypair, data);
-        return Buffer.from(result.signature);
+        return result.signature;
     }
 
     /**
@@ -210,7 +209,7 @@ export class CLIWallet {
      * @param signature - The signature to verify
      * @returns True if the signature is valid
      */
-    verifyMLDSA(data: Buffer, signature: Buffer): boolean {
+    verifyMLDSA(data: Uint8Array, signature: Uint8Array): boolean {
         return MessageSigner.verifyMLDSASignature(this.wallet.mldsaKeypair, data, signature);
     }
 }
@@ -222,15 +221,15 @@ export class CLIWallet {
  * @returns Object containing privateKey and publicKey buffers
  */
 export function generateMLDSAKeypair(level: CLIMldsaLevel): {
-    privateKey: Buffer;
-    publicKey: Buffer;
+    privateKey: Uint8Array;
+    publicKey: Uint8Array;
 } {
     const securityLevel = getMLDSASecurityLevel(level);
     const keypair = EcKeyPair.generateQuantumKeyPair(securityLevel);
 
     return {
-        privateKey: Buffer.from(keypair.privateKey),
-        publicKey: Buffer.from(keypair.publicKey),
+        privateKey: keypair.privateKey,
+        publicKey: keypair.publicKey,
     };
 }
 
@@ -240,7 +239,7 @@ export function generateMLDSAKeypair(level: CLIMldsaLevel): {
  * @param publicKey - The public key buffer
  * @returns Hex-encoded SHA-256 hash
  */
-export function computePublicKeyHash(publicKey: Buffer): string {
+export function computePublicKeyHash(publicKey: Uint8Array): string {
     return crypto.createHash('sha256').update(publicKey).digest('hex');
 }
 
