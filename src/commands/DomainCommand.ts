@@ -41,7 +41,7 @@ import {
     waitForTransactionConfirmation,
 } from '../lib/transaction.js';
 import { NetworkName } from '../types/index.js';
-import { PsbtOutputExtended } from '@btc-vision/bitcoin';
+import { PsbtOutputExtended, Satoshi } from '@btc-vision/bitcoin';
 import { StrippedTransactionOutput, TransactionOutputFlags } from 'opnet';
 
 const logger = new Logger();
@@ -208,7 +208,7 @@ async function registerDomain(domain: string, options: DomainRegisterOptions): P
 
         const extraUtxo: PsbtOutputExtended = {
             address: treasuryAddr,
-            value: Number(price),
+            value: price as Satoshi,
         };
 
         // Set transaction details for simulation

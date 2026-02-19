@@ -40,7 +40,11 @@ export function getProvider(network?: NetworkName): JSONRpcProvider {
 
     // Create new provider
     const bitcoinNetwork = getNetwork(targetNetwork);
-    const provider = new JSONRpcProvider(rpcUrl, bitcoinNetwork, DEFAULT_TIMEOUT);
+    const provider = new JSONRpcProvider({
+        url: rpcUrl,
+        network: bitcoinNetwork,
+        timeout: DEFAULT_TIMEOUT,
+    });
 
     providerCache.set(cacheKey, provider);
     return provider;

@@ -6,13 +6,13 @@
  * @module lib/wallet
  */
 
-import { Network, networks, Signer } from '@btc-vision/bitcoin';
+import { Network, networks } from '@btc-vision/bitcoin';
 import { MLDSASecurityLevel, QuantumBIP32Factory, QuantumBIP32Interface } from '@btc-vision/bip32';
 import { Address, EcKeyPair, MessageSigner, Mnemonic, Wallet } from '@btc-vision/transaction';
 import * as crypto from 'crypto';
 import { CLICredentials, CLIMldsaLevel, NetworkName } from '../types/index.js';
 import { canSign, loadCredentials } from './credentials.js';
-import { ECPairInterface } from 'ecpair';
+import { UniversalSigner } from '@btc-vision/ecpair';
 
 /**
  * Convert CLI network name to bitcoin-js Network object
@@ -70,7 +70,7 @@ export class CLIWallet {
     /**
      * Get the Bitcoin keypair for classical signing
      */
-    get keypair(): Signer | ECPairInterface | null {
+    get keypair(): UniversalSigner | null {
         return this.wallet.keypair;
     }
 
@@ -121,8 +121,9 @@ export class CLIWallet {
                 network,
                 securityLevel,
             );
+
             // Use UniSat-compatible derivation with P2TR (Taproot) address type
-            const wallet = mnemonic.deriveUnisat();
+            const wallet = mnemonic.deriveOPWallet();
             return new CLIWallet(wallet, network, credentials.mldsaLevel);
         }
 

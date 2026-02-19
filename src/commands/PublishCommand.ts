@@ -33,7 +33,7 @@ import {
     waitForTransactionConfirmation,
 } from '../lib/transaction.js';
 import { CLIMldsaLevel, NetworkName } from '../types/index.js';
-import { PsbtOutputExtended } from '@btc-vision/bitcoin';
+import { PsbtOutputExtended, Satoshi } from '@btc-vision/bitcoin';
 import { StrippedTransactionOutput, TransactionOutputFlags } from 'opnet';
 
 interface PublishOptions {
@@ -212,7 +212,7 @@ export class PublishCommand extends BaseCommand {
 
             const extraUtxo: PsbtOutputExtended = {
                 address: treasuryAddress.properties.treasuryAddress,
-                value: 10_000,
+                value: 10_000n as Satoshi,
             };
 
             let txParams = buildTransactionParams(

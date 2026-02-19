@@ -138,7 +138,9 @@ async function httpRequest(
         });
 
         if (options.body) {
-            const bodyBuffer = Buffer.isBuffer(options.body) ? options.body : Buffer.from(options.body);
+            const bodyBuffer = Buffer.isBuffer(options.body)
+                ? options.body
+                : Buffer.from(options.body);
             const totalBytes = bodyBuffer.length;
             const chunkSize = 64 * 1024; // 64KB chunks
             let bytesSent = 0;
@@ -312,7 +314,9 @@ export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult>
             size: data.length,
         };
     } catch (e) {
-        throw new Error(`IPFS pinning failed: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(`IPFS pinning failed: ${e instanceof Error ? e.message : String(e)}`, {
+            cause: e,
+        });
     }
 }
 
@@ -627,7 +631,7 @@ function generateSessionId(): string {
  * Sleep for a given number of milliseconds
  */
 function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -658,8 +662,8 @@ async function mfsCall(
         formParts.push(
             Buffer.from(
                 `--${boundary}\r\n` +
-                `Content-Disposition: form-data; name="file"\r\n` +
-                `Content-Type: application/octet-stream\r\n\r\n`,
+                    `Content-Disposition: form-data; name="file"\r\n` +
+                    `Content-Type: application/octet-stream\r\n\r\n`,
             ),
         );
         formParts.push(body);
@@ -757,10 +761,16 @@ export async function uploadDirectory(
 
     try {
         // Create MFS directory
-        await mfsCall(baseUrl, '/api/v0/files/mkdir', {
-            arg: mfsPath,
-            parents: 'true',
-        }, undefined, headers);
+        await mfsCall(
+            baseUrl,
+            '/api/v0/files/mkdir',
+            {
+                arg: mfsPath,
+                parents: 'true',
+            },
+            undefined,
+            headers,
+        );
 
         // Upload files one by one
         for (let i = 0; i < files.length; i++) {
@@ -771,19 +781,31 @@ export async function uploadDirectory(
             // Create parent directories if needed
             const parentDir = fileMfsPath.substring(0, fileMfsPath.lastIndexOf('/'));
             if (parentDir !== mfsPath) {
-                await mfsCall(baseUrl, '/api/v0/files/mkdir', {
-                    arg: parentDir,
-                    parents: 'true',
-                }, undefined, headers);
+                await mfsCall(
+                    baseUrl,
+                    '/api/v0/files/mkdir',
+                    {
+                        arg: parentDir,
+                        parents: 'true',
+                    },
+                    undefined,
+                    headers,
+                );
             }
 
             // Upload file
-            await mfsCall(baseUrl, '/api/v0/files/write', {
-                arg: fileMfsPath,
-                create: 'true',
-                parents: 'true',
-                truncate: 'true',
-            }, data, headers);
+            await mfsCall(
+                baseUrl,
+                '/api/v0/files/write',
+                {
+                    arg: fileMfsPath,
+                    create: 'true',
+                    parents: 'true',
+                    truncate: 'true',
+                },
+                data,
+                headers,
+            );
 
             uploadedBytes += data.length;
 
@@ -795,7 +817,7 @@ export async function uploadDirectory(
             const bar = '█'.repeat(filled) + '░'.repeat(empty);
 
             process.stdout.write(
-                `\r  Uploading: [${bar}] ${percent}% - ${i + 1}/${files.length} files (${formatBytes(uploadedBytes)}/${formatBytes(totalSize)})`
+                `\r  Uploading: [${bar}] ${percent}% - ${i + 1}/${files.length} files (${formatBytes(uploadedBytes)}/${formatBytes(totalSize)})`,
             );
         }
 
@@ -808,11 +830,17 @@ export async function uploadDirectory(
         }).start();
 
         // Request CIDv1 format (base32) from IPFS
-        const statResponse = await mfsCall(baseUrl, '/api/v0/files/stat', {
-            arg: mfsPath,
-            hash: 'true',
-            'cid-base': 'base32',
-        }, undefined, headers);
+        const statResponse = await mfsCall(
+            baseUrl,
+            '/api/v0/files/stat',
+            {
+                arg: mfsPath,
+                hash: 'true',
+                'cid-base': 'base32',
+            },
+            undefined,
+            headers,
+        );
 
         const statResult = JSON.parse(statResponse.toString()) as { Hash: string };
         let cid = statResult.Hash;
@@ -830,9 +858,15 @@ export async function uploadDirectory(
         // Pin the CID so it's not garbage collected
         spinner.text = 'Pinning content...';
         try {
-            await mfsCall(baseUrl, '/api/v0/pin/add', {
-                arg: cid,
-            }, undefined, headers);
+            await mfsCall(
+                baseUrl,
+                '/api/v0/pin/add',
+                {
+                    arg: cid,
+                },
+                undefined,
+                headers,
+            );
         } catch {
             // Pin might fail if already pinned or not supported, continue anyway
         }
@@ -841,10 +875,16 @@ export async function uploadDirectory(
 
         // Cleanup MFS directory (best effort, don't fail if this fails)
         try {
-            await mfsCall(baseUrl, '/api/v0/files/rm', {
-                arg: mfsPath,
-                recursive: 'true',
-            }, undefined, headers);
+            await mfsCall(
+                baseUrl,
+                '/api/v0/files/rm',
+                {
+                    arg: mfsPath,
+                    recursive: 'true',
+                },
+                undefined,
+                headers,
+            );
         } catch {
             // Ignore cleanup errors
         }
@@ -862,15 +902,24 @@ export async function uploadDirectory(
 
         // Try to cleanup on error
         try {
-            await mfsCall(baseUrl, '/api/v0/files/rm', {
-                arg: mfsPath,
-                recursive: 'true',
-            }, undefined, headers);
+            await mfsCall(
+                baseUrl,
+                '/api/v0/files/rm',
+                {
+                    arg: mfsPath,
+                    recursive: 'true',
+                },
+                undefined,
+                headers,
+            );
         } catch {
             // Ignore cleanup errors
         }
 
-        throw new Error(`IPFS directory upload failed: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(
+            `IPFS directory upload failed: ${e instanceof Error ? e.message : String(e)}`,
+            { cause: e },
+        );
     }
 }
 

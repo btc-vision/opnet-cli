@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/cli",
-    "version": "1.0.13",
+    "version": "1.1.0",
     "type": "module",
     "description": "CLI for the OPNet plugin ecosystem - scaffolding, compilation, signing, and registry interaction",
     "author": "OP_NET",
@@ -49,32 +49,32 @@
         "prepublishOnly": "npm run build"
     },
     "dependencies": {
-        "@btc-vision/bip32": "^6.0.3",
-        "@btc-vision/bitcoin": "^6.4.11",
-        "@btc-vision/logger": "^1.0.0",
+        "@btc-vision/bip32": "^7.1.2",
+        "@btc-vision/bitcoin": "^7.0.0-rc.4",
+        "@btc-vision/ecpair": "^4.0.5",
+        "@btc-vision/logger": "^1.0.8",
         "@btc-vision/plugin-sdk": "^1.0.0",
-        "@btc-vision/transaction": "^1.7.19",
-        "@inquirer/prompts": "^8.1.0",
+        "@btc-vision/transaction": "^1.8.0-rc.4",
+        "@inquirer/prompts": "^8.2.1",
         "bytenode": "^1.5.7",
-        "commander": "^14.0.0",
-        "ecpair": "^2.1.0",
-        "esbuild": "^0.27.1",
-        "opnet": "^1.7.18",
-        "ora": "^9.0.0"
+        "commander": "^14.0.3",
+        "esbuild": "^0.27.3",
+        "opnet": "^1.8.1-rc.3",
+        "ora": "^9.3.0"
     },
     "devDependencies": {
-        "@eslint/js": "^9.39.1",
-        "@types/node": "^25.0.2",
-        "eslint": "^9.39.1",
+        "@eslint/js": "^10.0.1",
+        "@types/node": "^25.2.3",
+        "eslint": "^10.0.0",
         "gulp": "^5.0.1",
         "gulp-cached": "^1.1.1",
         "gulp-clean": "^0.4.0",
-        "gulp-eslint-new": "^2.4.0",
+        "gulp-eslint-new": "^2.6.0",
         "gulp-logger-new": "^1.0.1",
         "gulp-typescript": "^6.0.0-alpha.1",
-        "prettier": "^3.6.2",
-        "typescript": "^5.9.2",
-        "typescript-eslint": "^8.39.1"
+        "prettier": "^3.8.1",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.56.0"
     },
     "keywords": [
         "opnet",

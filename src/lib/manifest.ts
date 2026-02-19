@@ -108,7 +108,9 @@ export function loadManifest(manifestPath: string): IPluginMetadata {
         const content = fs.readFileSync(resolvedPath, 'utf-8');
         manifest = JSON.parse(content) as Partial<IPluginMetadata>;
     } catch (e) {
-        throw new Error(`Failed to parse manifest: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(`Failed to parse manifest: ${e instanceof Error ? e.message : String(e)}`, {
+            cause: e,
+        });
     }
 
     // Basic validation for source manifests (checksum is computed during compilation)
