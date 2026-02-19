@@ -9,6 +9,7 @@
 import * as https from 'https';
 import * as http from 'http';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import ora, { Ora } from 'ora';
 import { loadConfig } from './config.js';
 
@@ -38,11 +39,13 @@ interface RequestOptions {
     timeout?: number;
     followRedirect?: boolean;
     maxRedirects?: number;
+    maxResponseSize?: number;
     onProgress?: (bytesSent: number, totalBytes: number) => void;
     onUploadComplete?: () => void;
 }
 
 const DEFAULT_MAX_REDIRECTS = 10;
+const MAX_RESPONSE_SIZE = 512 * 1024 * 1024; // 512 MB
 
 /**
  * Make an HTTP/HTTPS request with redirect support
@@ -52,6 +55,80 @@ const DEFAULT_MAX_REDIRECTS = 10;
  * @param redirectCount - Current redirect count (internal)
  * @returns Response body buffer
  */
+
+/**
+ * Check if a URL targets a private/internal IP range (SSRF protection).
+ */
+function isPrivateUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+        const hostname = parsed.hostname;
+
+        // Block common private/internal ranges
+        if (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '[::1]' ||
+            hostname === '0.0.0.0' ||
+            hostname.endsWith('.local') ||
+            hostname.endsWith('.internal')
+        ) {
+            return true;
+        }
+
+        // Block private IPv4 ranges: 10.x.x.x, 172.16-31.x.x, 192.168.x.x, 169.254.x.x
+        const ipv4Match = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+        if (ipv4Match) {
+            const [, a, b] = ipv4Match.map(Number);
+            if (
+                a === 10 ||
+                a === 127 ||
+                (a === 172 && b >= 16 && b <= 31) ||
+                (a === 192 && b === 168) ||
+                (a === 169 && b === 254) ||
+                a === 0
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    } catch {
+        return true; // Block unparseable URLs
+    }
+}
+
+/**
+ * Strip auth headers when redirecting cross-origin to prevent credential leakage.
+ */
+function getSafeRedirectOptions(
+    options: RequestOptions,
+    originalUrl: string,
+    redirectUrl: string,
+): RequestOptions {
+    const original = new URL(originalUrl);
+    const redirect = new URL(redirectUrl);
+
+    const sameOrigin = original.origin === redirect.origin;
+
+    if (sameOrigin) {
+        return options;
+    }
+
+    // Cross-origin redirect: strip sensitive headers
+    const safeHeaders: Record<string, string> = {};
+    if (options.headers) {
+        for (const [key, value] of Object.entries(options.headers)) {
+            const lower = key.toLowerCase();
+            if (lower !== 'authorization' && lower !== 'cookie') {
+                safeHeaders[key] = value;
+            }
+        }
+    }
+
+    return { ...options, headers: safeHeaders };
+}
+
 async function httpRequest(
     url: string,
     options: RequestOptions,
@@ -87,8 +164,18 @@ async function httpRequest(
                 const location = Array.isArray(locationHeader) ? locationHeader[0] : locationHeader;
                 if (location) {
                     const redirectUrl = new URL(location, url).href;
+                    if (isPrivateUrl(redirectUrl)) {
+                        res.resume();
+                        reject(
+                            new Error(
+                                `Redirect blocked: target resolves to a private/internal address`,
+                            ),
+                        );
+                        return;
+                    }
+                    const safeOptions = getSafeRedirectOptions(options, url, redirectUrl);
                     res.resume();
-                    httpRequest(redirectUrl, options, redirectCount + 1)
+                    httpRequest(redirectUrl, safeOptions, redirectCount + 1)
                         .then(resolve)
                         .catch(reject);
                     return;
@@ -96,8 +183,16 @@ async function httpRequest(
             }
 
             const chunks: Buffer[] = [];
+            let totalSize = 0;
+            const maxResponseSize = options.maxResponseSize ?? MAX_RESPONSE_SIZE;
 
             res.on('data', (chunk: Buffer) => {
+                totalSize += chunk.length;
+                if (totalSize > maxResponseSize) {
+                    req.destroy();
+                    reject(new Error(`Response size exceeded limit (${maxResponseSize} bytes)`));
+                    return;
+                }
                 chunks.push(chunk);
             });
 
@@ -110,7 +205,16 @@ async function httpRequest(
                     const hrefMatch = bodyStr.match(/href="([^"]+)"/);
                     if (hrefMatch && hrefMatch[1]) {
                         const redirectUrl = new URL(hrefMatch[1], url).href;
-                        httpRequest(redirectUrl, options, redirectCount + 1)
+                        if (isPrivateUrl(redirectUrl)) {
+                            reject(
+                                new Error(
+                                    `Redirect blocked: target resolves to a private/internal address`,
+                                ),
+                            );
+                            return;
+                        }
+                        const safeOptions = getSafeRedirectOptions(options, url, redirectUrl);
+                        httpRequest(redirectUrl, safeOptions, redirectCount + 1)
                             .then(resolve)
                             .catch(reject);
                         return;
@@ -196,7 +300,7 @@ export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult>
         }
 
         // Build multipart form data
-        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+        const boundary = '----FormBoundary' + crypto.randomBytes(16).toString('hex');
         const fileName = name || 'plugin.opnet';
 
         const formParts: Buffer[] = [];
@@ -225,11 +329,13 @@ export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult>
 
         // Add authorization if configured
         if (config.ipfsPinningAuthHeader) {
-            const [headerName, headerValue] = config.ipfsPinningAuthHeader
-                .split(':')
-                .map((s) => s.trim());
-            if (headerName && headerValue) {
-                headers[headerName] = headerValue;
+            const colonIndex = config.ipfsPinningAuthHeader.indexOf(':');
+            if (colonIndex > 0) {
+                const headerName = config.ipfsPinningAuthHeader.substring(0, colonIndex).trim();
+                const headerValue = config.ipfsPinningAuthHeader.substring(colonIndex + 1).trim();
+                if (headerName && headerValue) {
+                    headers[headerName] = headerValue;
+                }
             }
         } else if (config.ipfsPinningApiKey) {
             headers['Authorization'] = `Bearer ${config.ipfsPinningApiKey}`;
@@ -239,10 +345,10 @@ export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult>
         const url = new URL(endpoint);
 
         let requestUrl: string;
-        if (url.hostname.includes('ipfs.opnet.org')) {
+        if (url.hostname === 'ipfs.opnet.org' || url.hostname.endsWith('.ipfs.opnet.org')) {
             // OPNet IPFS gateway - uses standard IPFS API
             requestUrl = endpoint;
-        } else if (url.hostname.includes('pinata')) {
+        } else if (url.hostname.endsWith('.pinata.cloud') || url.hostname === 'pinata.cloud') {
             // Pinata-specific endpoint
             requestUrl = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
             // Only set pinata_api_key header if using API key (not JWT)
@@ -253,10 +359,10 @@ export async function pinToIPFS(data: Buffer, name?: string): Promise<PinResult>
                     headers['pinata_secret_api_key'] = config.ipfsPinningSecret;
                 }
             }
-        } else if (url.hostname.includes('web3.storage') || url.hostname.includes('w3s.link')) {
+        } else if (url.hostname.endsWith('.web3.storage') || url.hostname === 'web3.storage' || url.hostname.endsWith('.w3s.link') || url.hostname === 'w3s.link') {
             // web3.storage endpoint
             requestUrl = endpoint.endsWith('/') ? endpoint + 'upload' : endpoint + '/upload';
-        } else if (url.hostname.includes('nft.storage')) {
+        } else if (url.hostname.endsWith('.nft.storage') || url.hostname === 'nft.storage') {
             // nft.storage endpoint
             requestUrl = 'https://api.nft.storage/upload';
         } else if (url.pathname.includes('/api/v0/')) {
@@ -620,11 +726,7 @@ export interface DirectoryPinResult {
  * Generate a random UUID for session isolation
  */
 function generateSessionId(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = (Math.random() * 16) | 0;
-        const v = c === 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    });
+    return crypto.randomUUID();
 }
 
 /**
@@ -657,7 +759,7 @@ async function mfsCall(
 
     let formBody: Buffer | undefined;
     if (body) {
-        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+        const boundary = '----FormBoundary' + crypto.randomBytes(16).toString('hex');
         const formParts: Buffer[] = [];
         formParts.push(
             Buffer.from(

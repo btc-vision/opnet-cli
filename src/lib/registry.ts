@@ -395,8 +395,25 @@ export function parsePackageName(fullName: string): { scope: string | null; name
  * @param permissions - Plugin permissions
  * @returns SHA-256 hash as Uint8Array
  */
+/**
+ * Recursively sort object keys for deterministic JSON serialization.
+ */
+function canonicalSort(value: unknown): unknown {
+    if (value === null || value === undefined || typeof value !== 'object') {
+        return value;
+    }
+    if (Array.isArray(value)) {
+        return value.map(canonicalSort);
+    }
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+        sorted[key] = canonicalSort((value as Record<string, unknown>)[key]);
+    }
+    return sorted;
+}
+
 export function computePermissionsHash(permissions: IPluginPermissions | undefined): Uint8Array {
-    const json = JSON.stringify(permissions);
+    const json = JSON.stringify(canonicalSort(permissions));
     const hash = crypto.createHash('sha256').update(json).digest();
     return new Uint8Array(hash);
 }
@@ -428,7 +445,11 @@ export function registryToMldsaLevel(registryLevel: number): CLIMldsaLevel {
         2: 65,
         3: 87,
     };
-    return levels[registryLevel] || 44;
+    const level = levels[registryLevel];
+    if (level === undefined) {
+        throw new Error(`Unknown MLDSA registry level: ${registryLevel}. Expected 1, 2, or 3.`);
+    }
+    return level;
 }
 
 /**

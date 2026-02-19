@@ -68,9 +68,14 @@ export function getWalletAddress(wallet: CLIWallet): Address {
  * @returns Formatted string with BTC equivalent
  */
 export function formatSats(sats: bigint): string {
-    const btc = Number(sats) / 100_000_000;
-    if (btc >= 0.001) {
-        return `${sats} sats (${btc.toFixed(8)} BTC)`;
+    const btcWhole = sats / 100_000_000n;
+    const btcFrac = sats % 100_000_000n;
+    const absWhole = btcWhole < 0n ? -btcWhole : btcWhole;
+    const absFrac = btcFrac < 0n ? -btcFrac : btcFrac;
+    const sign = sats < 0n ? '-' : '';
+    const btcStr = `${sign}${absWhole}.${absFrac.toString().padStart(8, '0')}`;
+    if (absWhole > 0n || absFrac >= 100_000n) {
+        return `${sats} sats (${btcStr} BTC)`;
     }
     return `${sats} sats`;
 }

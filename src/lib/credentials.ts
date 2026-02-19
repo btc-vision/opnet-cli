@@ -20,13 +20,29 @@ const CREDENTIALS_FILE = path.join(os.homedir(), '.opnet', 'credentials.json');
  *
  * @returns The stored credentials or null if not found
  */
+const VALID_MLDSA_LEVELS: readonly CLIMldsaLevel[] = [44, 65, 87] as const;
+
+/**
+ * Parse and validate MLDSA level from environment variable.
+ */
+function parseEnvMldsaLevel(): CLIMldsaLevel {
+    const raw = process.env.OPNET_MLDSA_LEVEL;
+    if (!raw) return 44;
+    const parsed = parseInt(raw, 10);
+    if (!VALID_MLDSA_LEVELS.includes(parsed as CLIMldsaLevel)) {
+        throw new Error(
+            `Invalid OPNET_MLDSA_LEVEL="${raw}". Must be one of: ${VALID_MLDSA_LEVELS.join(', ')}`,
+        );
+    }
+    return parsed as CLIMldsaLevel;
+}
+
 export function loadCredentials(): CLICredentials | null {
     // Check for environment variable overrides first
     if (process.env.OPNET_MNEMONIC) {
         return {
             mnemonic: process.env.OPNET_MNEMONIC,
-            mldsaLevel:
-                (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
+            mldsaLevel: parseEnvMldsaLevel(),
             network: (process.env.OPNET_NETWORK as NetworkName) || 'mainnet',
         };
     }
@@ -35,8 +51,7 @@ export function loadCredentials(): CLICredentials | null {
         return {
             wif: process.env.OPNET_PRIVATE_KEY,
             mldsaPrivateKey: process.env.OPNET_MLDSA_KEY,
-            mldsaLevel:
-                (parseInt(process.env.OPNET_MLDSA_LEVEL || '44', 10) as CLIMldsaLevel) || 44,
+            mldsaLevel: parseEnvMldsaLevel(),
             network: (process.env.OPNET_NETWORK as NetworkName) || 'mainnet',
         };
     }
@@ -46,10 +61,27 @@ export function loadCredentials(): CLICredentials | null {
         return null;
     }
 
+    // Check file permissions (warn if too open)
+    try {
+        const stat = fs.statSync(CREDENTIALS_FILE);
+        const mode = stat.mode & 0o777;
+        if (mode !== 0o600 && mode !== 0o400) {
+            process.stderr.write(
+                `WARNING: Credentials file ${CREDENTIALS_FILE} has permissions ${mode.toString(8)}. Expected 600 or 400.\n` +
+                    `Run: chmod 600 ${CREDENTIALS_FILE}\n`,
+            );
+        }
+    } catch {
+        // Ignore stat errors, proceed with read
+    }
+
     try {
         const content = fs.readFileSync(CREDENTIALS_FILE, 'utf-8');
         return JSON.parse(content) as CLICredentials;
-    } catch {
+    } catch (error) {
+        process.stderr.write(
+            `WARNING: Failed to parse credentials file: ${error instanceof Error ? error.message : String(error)}\n`,
+        );
         return null;
     }
 }

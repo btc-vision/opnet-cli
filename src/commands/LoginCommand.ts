@@ -35,6 +35,26 @@ export class LoginCommand extends BaseCommand {
 
     private async execute(options: LoginOptions): Promise<void> {
         try {
+            // Warn if secrets were passed via CLI arguments (visible in process list and shell history)
+            if (options.mnemonic) {
+                this.logger.warn(
+                    'WARNING: Mnemonic passed via CLI argument. It may be visible in shell history and process list.',
+                );
+                this.logger.warn(
+                    'Consider using interactive mode instead: opnet login',
+                );
+                this.logger.log('');
+            }
+            if (options.wif || options.mldsa) {
+                this.logger.warn(
+                    'WARNING: Private key passed via CLI argument. It may be visible in shell history and process list.',
+                );
+                this.logger.warn(
+                    'Consider using interactive mode or environment variables instead.',
+                );
+                this.logger.log('');
+            }
+
             const credentials = await this.buildCredentials(options);
 
             // Load wallet to display identity info
